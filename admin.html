@@ -82,7 +82,8 @@
     <div class="tabs" role="tablist" aria-label="Sections de l'administration">
       <button role="tab" type="button" class="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="true">Projets <span class="count" id="count-projects"></span></button>
       <button role="tab" type="button" class="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages <span class="count badge" id="count-messages" hidden></span></button>
-      <button role="tab" type="button" class="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="false" tabindex="-1">Photo de profil</button>
+      <button role="tab" type="button" class="tab" id="tab-skills" aria-controls="panel-skills" aria-selected="false" tabindex="-1">Compétences</button>
+      <button role="tab" type="button" class="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="false" tabindex="-1">Profil</button>
     </div>
 
     <!-- Projets -->
@@ -115,11 +116,24 @@
       <div class="messages" id="messages"></div>
     </div>
 
+    <!-- Compétences -->
+    <div class="panel" id="panel-skills" role="tabpanel" aria-labelledby="tab-skills" hidden>
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Compétences</h1>
+          <p class="muted">Chaque carte apparaît dans la section « Compétences » du site, dans cet ordre.</p>
+        </div>
+        <button class="btn" type="button" id="new-skill-card">+ Nouvelle carte</button>
+      </div>
+      <p class="notice" id="skills-default-note" hidden>Ce sont les compétences actuellement affichées sur ton site. Dès que tu en modifies une, toutes seront enregistrées dans Firebase et tu pourras les gérer d'ici.</p>
+      <div class="skills-admin" id="skills-admin"></div>
+    </div>
+
     <!-- Profil -->
     <div class="panel" id="panel-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
       <div class="panel-head">
         <div>
-          <h1 class="panel-title">Photo de profil</h1>
+          <h1 class="panel-title">Profil</h1>
           <p class="muted">Affichée dans la section « À propos ». Format portrait conseillé (4:5), fond neutre, bonne lumière.</p>
         </div>
       </div>
@@ -131,6 +145,16 @@
           <button class="btn btn-ghost" type="button" id="profile-reset">Rétablir la photo par défaut</button>
           <p class="muted small" id="profile-status"></p>
         </div>
+      </div>
+
+      <div class="year-box">
+        <h2 class="sub-title">Année d'étude</h2>
+        <p class="muted">Affichée en haut du site (« Formation ») et dans « À propos ». À changer à chaque rentrée.</p>
+        <div class="year-row">
+          <select id="year-select" aria-label="Année d'étude en GMP"></select>
+          <button class="btn" type="button" id="year-save">Enregistrer</button>
+        </div>
+        <p class="muted small" id="year-status"></p>
       </div>
     </div>
   </section>
@@ -204,6 +228,45 @@
       <p class="muted small" id="editor-status" role="status"></p>
       <button class="btn btn-ghost" type="button" data-cancel>Annuler</button>
       <button class="btn" type="submit" id="editor-save">Enregistrer</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- Éditeur de carte de compétences -->
+<dialog class="editor skill-editor" id="skill-editor" aria-labelledby="skill-editor-title">
+  <form id="skill-form" method="dialog" novalidate>
+    <header class="editor-head">
+      <h2 id="skill-editor-title">Carte de compétences</h2>
+      <button class="icon-btn" type="button" data-skill-cancel aria-label="Fermer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="editor-body single">
+      <div class="form-row">
+        <div class="field">
+          <label for="s-category">Petit libellé (au-dessus du titre)</label>
+          <input id="s-category" maxlength="60" placeholder="Ex. Mécanique" />
+        </div>
+        <div class="field">
+          <label for="s-icon">Icône</label>
+          <select id="s-icon"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="s-title">Titre de la carte *</label>
+        <input id="s-title" maxlength="80" required placeholder="Ex. Génie Mécanique" />
+      </div>
+      <div>
+        <p class="photos-label">Compétences de la carte</p>
+        <p class="muted small">Le niveau affiche une barre (Notions → Expert). « Sans niveau » affiche un simple point.</p>
+        <ul class="skill-rows" id="skill-rows"></ul>
+        <button class="btn btn-ghost btn-small" type="button" id="add-skill-row">+ Ajouter une compétence</button>
+      </div>
+    </div>
+    <footer class="editor-foot">
+      <p class="muted small" id="skill-status" role="status"></p>
+      <button class="btn btn-ghost" type="button" data-skill-cancel>Annuler</button>
+      <button class="btn" type="submit" id="skill-save">Enregistrer</button>
     </footer>
   </form>
 </dialog>

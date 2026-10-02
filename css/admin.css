@@ -115,6 +115,28 @@ code { font-family: var(--font-mono); font-size: .85em; background: var(--bg-alt
 .editor-foot { display: flex; align-items: center; gap: .6rem; padding: 1rem 1.4rem; border-top: 1px solid var(--line); }
 .editor-foot p { margin-right: auto; }
 
+/* Compétences */
+.notice { padding: .9rem 1.1rem; border-radius: 8px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size: .9rem; margin-bottom: 1.2rem; }
+.skills-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1.2rem; }
+.skill-admin-card { background: var(--dark-bg); color: var(--dark-ink); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--dark-line); }
+.skill-admin-card .skill-card { border: 0; border-radius: 0; flex: 1; transform: none !important; }
+.skill-admin-card .skill-card.reveal { opacity: 1; }
+.skill-admin-card .a-actions { border-top-color: var(--dark-line); }
+.skill-admin-card .a-actions button { color: var(--dark-muted); }
+.skill-admin-card .a-actions button + button { border-left-color: var(--dark-line); }
+.skill-admin-card .a-actions button:hover { color: #fff; background: var(--dark-surface); }
+.skill-admin-card .levels li { --lvl: var(--target); }
+.editor-body.single { grid-template-columns: 1fr; max-width: 760px; width: 100%; margin-inline: auto; }
+.skill-rows { display: grid; gap: .5rem; margin: .8rem 0; }
+.skill-row { display: grid; grid-template-columns: 1fr 170px auto; gap: .5rem; align-items: center; }
+.skill-row input, .skill-row select, .year-row select { width: 100%; font: inherit; font-size: .9rem; padding: .6rem .7rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.skill-row .photo-tools button { width: 32px; height: 32px; }
+.year-box { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); max-width: 560px; }
+.sub-title { font-family: var(--font-display); font-weight: 500; font-size: 1.35rem; margin-bottom: .3rem; }
+.year-row { display: flex; gap: .6rem; margin-top: 1rem; }
+.year-row select { max-width: 240px; }
+@media (max-width: 560px) { .skill-row { grid-template-columns: 1fr 1fr; } .skill-row input { grid-column: 1 / -1; } }
+
 /* Notifications */
 .toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 300; display: grid; gap: .5rem; max-width: min(380px, calc(100% - 2rem)); }
 .toast { padding: .85rem 1.1rem; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: .88rem; box-shadow: var(--shadow); animation: toastIn .4s var(--ease-out); }

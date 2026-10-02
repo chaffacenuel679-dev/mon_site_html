@@ -14,6 +14,7 @@ css/admin.css         Styles de l'administration
 js/main.js            Animations, filtres, galerie photo, formulaire de contact
 js/admin.js           Logique de l'administration
 js/image-utils.js     Compression des photos dans le navigateur
+js/skills.js          Compétences : valeurs par défaut, icônes, rendu des cartes
 js/firebase.js        Chargement du SDK Firebase
 js/firebase-config.js ← LE SEUL FICHIER À REMPLIR
 firestore.rules       Règles de sécurité de la base de données
@@ -92,7 +93,9 @@ dans Firebase pour que tu puisses leur ajouter des photos.
   Chaque photo est **compressée automatiquement** dans ton navigateur (WebP, 2000 px max,
   < 900 Ko) : une photo de téléphone de 5 Mo passe en ~300 Ko sans perte visible.
 - **Messages** : tout ce que les visiteurs envoient via le formulaire de contact.
-- **Photo de profil** : remplace la photo de la section « À propos ».
+- **Compétences** : ajoute, modifie, réordonne ou supprime les cartes de compétences ;
+  chaque compétence a un niveau (Notions, Débutant, Intermédiaire, Avancé, Expert) ou un simple point.
+- **Profil** : photo de la section « À propos » et année d'étude en GMP (à changer à chaque rentrée).
 
 ## Choix techniques (et pourquoi)
 - **Pourquoi les photos sont dans Firestore et pas dans Firebase Storage ?**
