@@ -8,12 +8,12 @@
 // =====================================================================
 
 export const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCbshWETY8SDA2-tJ6PtqKGFbN21rcGM7g",
+  authDomain: "cenuel-portfolio.firebaseapp.com",
+  projectId: "cenuel-portfolio",
+  storageBucket: "cenuel-portfolio.firebasestorage.app",
+  messagingSenderId: "787592424759",
+  appId: "1:787592424759:web:7b209d5211e31609e67eb2"
 };
 
 // Seul ce compte Google peut se connecter à /admin.html et publier.
