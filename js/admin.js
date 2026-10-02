@@ -2,6 +2,7 @@ import {
   isConfigured, getFirestoreKit, getAuthKit, ADMIN_EMAIL, CATEGORIES,
   safeImage, safeLink, formatMonth, sortProjects
 } from './firebase.js';
+import { LEVELS, SKILL_ICONS, DEFAULT_SKILLS, YEAR_OPTIONS, sanitizeSkills, renderSkillCard } from './skills.js';
 import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE } from './image-utils.js';
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -77,6 +78,8 @@ async function start() {
     loadProjects();
     loadMessages();
     loadProfile();
+    loadSkills();
+    loadInfo();
   });
 }
 
@@ -547,6 +550,142 @@ $('#profile-reset').addEventListener('click', async () => {
     $('#profile-preview').src = DEFAULT_PHOTO;
     $('#profile-status').textContent = 'Photo par défaut du site.';
     toast('Photo par défaut rétablie.');
+  } catch (err) { toast(explain(err), 'err'); }
+});
+
+/* =====================================================
+   COMPÉTENCES
+   ===================================================== */
+let skillCards = [];
+let skillsSaved = false;     // false = compétences par défaut du site, pas encore dans Firebase
+let editingIndex = null;
+const skillEditor = $('#skill-editor');
+const skillRows = $('#skill-rows');
+
+$('#s-icon').append(...Object.entries(SKILL_ICONS).map(([k, v]) => el('option', { value: k, text: v.label })));
+
+async function loadSkills() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'skills'));
+    const cards = snap.exists() ? sanitizeSkills(snap.data().cards) : [];
+    skillsSaved = cards.length > 0;
+    skillCards = skillsSaved ? cards : structuredClone(DEFAULT_SKILLS);
+    renderSkillsAdmin();
+  } catch (err) { console.error(err); toast(explain(err), 'err'); }
+}
+
+async function saveSkills(message) {
+  await fs.setDoc(fs.doc(db, 'settings', 'skills'), { cards: skillCards, updatedAt: fs.serverTimestamp() });
+  skillsSaved = true;
+  renderSkillsAdmin();
+  toast(message);
+}
+
+function renderSkillsAdmin() {
+  $('#skills-default-note').hidden = skillsSaved;
+  $('#skills-admin').replaceChildren(...skillCards.map((card, i) => {
+    const btn = (label, fn, cls = '', disabled = false) => {
+      const b = el('button', { type: 'button', text: label, class: cls, disabled });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const move = async d => {
+      const j = i + d;
+      [skillCards[i], skillCards[j]] = [skillCards[j], skillCards[i]];
+      try { await saveSkills('Ordre mis à jour.'); } catch (err) { toast(explain(err), 'err'); loadSkills(); }
+    };
+    return el('div', { class: 'skill-admin-card' }, [
+      renderSkillCard(card),
+      el('div', { class: 'a-actions' }, [
+        btn('Modifier', () => openSkillEditor(i)),
+        btn('↑', () => move(-1), '', i === 0),
+        btn('↓', () => move(1), '', i === skillCards.length - 1),
+        btn('Supprimer', async () => {
+          if (!confirm(`Supprimer la carte « ${card.title} » ?`)) return;
+          skillCards.splice(i, 1);
+          try { await saveSkills('Carte supprimée.'); } catch (err) { toast(explain(err), 'err'); loadSkills(); }
+        }, 'danger')
+      ])
+    ]);
+  }));
+}
+
+function addSkillRow(item = { name: '', level: 3 }) {
+  const name = el('input', { type: 'text', value: item.name, maxLength: 120, placeholder: 'Ex. Usinage sur tour', 'aria-label': 'Nom de la compétence' });
+  const level = el('select', { 'aria-label': 'Niveau' }, LEVELS.map(l => el('option', { value: String(l.value), text: l.label })));
+  level.value = String(item.level ?? 0);
+  const row = el('li', { class: 'skill-row' });
+  const tool = (label, title, fn, cls = '') => {
+    const b = el('button', { type: 'button', text: label, title, 'aria-label': title, class: cls });
+    b.addEventListener('click', fn);
+    return b;
+  };
+  row.append(name, level, el('div', { class: 'photo-tools' }, [
+    tool('↑', 'Monter', () => row.previousElementSibling && skillRows.insertBefore(row, row.previousElementSibling)),
+    tool('↓', 'Descendre', () => row.nextElementSibling && skillRows.insertBefore(row.nextElementSibling, row)),
+    tool('✕', 'Retirer', () => row.remove(), 'del')
+  ]));
+  skillRows.append(row);
+  return name;
+}
+
+function openSkillEditor(index = null) {
+  editingIndex = index;
+  const card = index === null ? { category: '', title: '', icon: 'gear', items: [] } : skillCards[index];
+  $('#skill-editor-title').textContent = index === null ? 'Nouvelle carte de compétences' : 'Modifier la carte';
+  $('#s-category').value = card.category;
+  $('#s-title').value = card.title;
+  $('#s-icon').value = card.icon;
+  $('#skill-status').textContent = '';
+  skillRows.replaceChildren();
+  (card.items.length ? card.items : [{ name: '', level: 3 }]).forEach(addSkillRow);
+  skillEditor.showModal();
+  $('#s-title').focus();
+}
+
+$('#new-skill-card').addEventListener('click', () => openSkillEditor());
+$('#add-skill-row').addEventListener('click', () => addSkillRow().focus());
+$$('[data-skill-cancel]', skillEditor).forEach(b => b.addEventListener('click', () => skillEditor.close()));
+
+$('#skill-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const title = $('#s-title').value.trim();
+  if (!title) { $('#s-title').setAttribute('aria-invalid', 'true'); $('#s-title').focus(); return; }
+  $('#s-title').removeAttribute('aria-invalid');
+  const items = $$('.skill-row', skillRows)
+    .map(r => ({ name: $('input', r).value.trim(), level: Number($('select', r).value) }))
+    .filter(i => i.name);
+  if (!items.length) { $('#skill-status').textContent = 'Ajoute au moins une compétence.'; return; }
+  const card = sanitizeSkills([{ category: $('#s-category').value.trim(), title, icon: $('#s-icon').value, items }])[0];
+  const previous = structuredClone(skillCards);
+  if (editingIndex === null) skillCards.push(card); else skillCards[editingIndex] = card;
+  const btn = $('#skill-save');
+  btn.disabled = true;
+  try {
+    await saveSkills(editingIndex === null ? 'Carte ajoutée au site.' : 'Carte mise à jour sur le site.');
+    skillEditor.close();
+  } catch (err) {
+    console.error(err);
+    skillCards = previous;
+    $('#skill-status').textContent = explain(err);
+  } finally { btn.disabled = false; }
+});
+
+/* =====================================================
+   ANNÉE D'ÉTUDE
+   ===================================================== */
+$('#year-select').append(...YEAR_OPTIONS.map(y => el('option', { value: String(y.value), text: y.text.charAt(0).toUpperCase() + y.text.slice(1) + ' GMP' })));
+async function loadInfo() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'info'));
+    $('#year-select').value = String(snap.exists() ? snap.data().gmpYear : 2);
+  } catch (err) { console.error(err); }
+}
+$('#year-save').addEventListener('click', async () => {
+  try {
+    await fs.setDoc(fs.doc(db, 'settings', 'info'), { gmpYear: Number($('#year-select').value), updatedAt: fs.serverTimestamp() }, { merge: true });
+    $('#year-status').textContent = 'Année mise à jour sur le site.';
+    toast('Année d\'étude mise à jour.');
   } catch (err) { toast(explain(err), 'err'); }
 });
 

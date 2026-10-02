@@ -222,11 +222,9 @@ strong { font-weight: 700; }
 .hero-name .line:first-child { font-size: .52em; color: var(--h-muted); letter-spacing: -.01em; }
 .hero-name .strong { font-weight: 600; }
 .hero-name em { font-style: normal; }
-.shine-text {
-  background: linear-gradient(100deg, #e3955c 0%, #f7c08f 25%, #fff3e6 35%, #f0a066 45%, #c8682c 70%, #e3955c 100%);
-  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: shine 6s ease-in-out infinite; animation-delay: 1.4s;
-}
+/* Nom en couleur pleine : le texte « découpé » dans un dégradé (background-clip)
+   s'affichait mal sur certains téléphones Android (« CI IAFFA »). */
+.name-accent { color: var(--h-accent); text-shadow: 0 0 28px rgba(240, 160, 102, .35); }
 .hero-role { margin-top: 1.1rem; font-family: var(--font-mono); font-size: clamp(.95rem, 1.6vw, 1.12rem); color: var(--h-ink); min-height: 1.6em; }
 .typed { color: var(--h-accent); }
 .caret { display: inline-block; width: 2px; height: 1.15em; margin-left: 3px; vertical-align: -.2em; background: var(--h-accent); animation: blink 1s steps(1) infinite; }
@@ -445,6 +443,7 @@ strong { font-weight: 700; }
 .levels li[data-level="3"] { --target: 3; }
 .levels li[data-level="5"] { --target: 5; }
 .levels li[data-level="2"] { --target: 2; }
+.levels li[data-level="1"] { --target: 1; }
 .skill-card.visible .levels li { --lvl: var(--target); }
 .skill-card.visible .levels li:nth-child(2) i { transition-delay: .12s; }
 .skill-card.visible .levels li:nth-child(3) i { transition-delay: .24s; }
@@ -627,7 +626,6 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 @keyframes drift1 { to { transform: translate(-80px, 60px) scale(1.15); } }
 @keyframes drift2 { to { transform: translate(90px, -50px) scale(1.1); } }
 @keyframes gridPan { to { background-position: 96px 96px, 96px 96px, 24px 24px, 24px 24px; } }
-@keyframes shine { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0% 0; } }
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes sweep { 0%, 60% { left: -60%; } 100% { left: 130%; } }
 @keyframes pulseGreen { 0% { box-shadow: 0 0 0 0 #4ade8099; } 70%, 100% { box-shadow: 0 0 0 9px transparent; } }

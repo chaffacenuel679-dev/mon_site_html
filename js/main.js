@@ -1,6 +1,7 @@
 import {
   isConfigured, getFirestoreKit, safeImage, safeLink, formatMonth, sortProjects
 } from './firebase.js';
+import { sanitizeSkills, renderSkillCard, YEAR_OPTIONS } from './skills.js';
 
 window.__siteReady = true;
 const root = document.documentElement;
@@ -122,13 +123,16 @@ function observeReveal(scope = document) {
 observeReveal();
 
 // Halo lumineux qui suit la souris sur les cartes de compétences
-$$('.skill-card').forEach(card => {
-  card.addEventListener('pointermove', e => {
-    const r = card.getBoundingClientRect();
-    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    card.style.setProperty('--my', `${e.clientY - r.top}px`);
+function spotlight(scope = document) {
+  $$('.skill-card', scope).forEach(card => {
+    card.addEventListener('pointermove', e => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      card.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
   });
-});
+}
+spotlight();
 
 /* ---------------- Projets : illustrations et inclinaison 3D ---------------- */
 const ICONS = {
@@ -260,10 +264,28 @@ async function loadRemoteContent() {
   if (!isConfigured) return;
   try {
     const { db, fs } = await getFirestoreKit();
-    const [snap, profile] = await Promise.all([
+    const [snap, profile, skills, info] = await Promise.all([
       fs.getDocs(fs.query(fs.collection(db, 'projects'), fs.where('published', '==', true))),
-      fs.getDoc(fs.doc(db, 'settings', 'profile')).catch(() => null)
+      fs.getDoc(fs.doc(db, 'settings', 'profile')).catch(() => null),
+      fs.getDoc(fs.doc(db, 'settings', 'skills')).catch(() => null),
+      fs.getDoc(fs.doc(db, 'settings', 'info')).catch(() => null)
     ]);
+
+    // Compétences gérées depuis l'administration
+    const cards = skills?.exists() ? sanitizeSkills(skills.data().cards) : [];
+    if (cards.length) {
+      const skillsGrid = $('.skills-grid');
+      skillsGrid.replaceChildren(...cards.map(renderSkillCard));
+      spotlight(skillsGrid);
+      observeReveal(skillsGrid);
+    }
+
+    // Année d'étude
+    const year = info?.exists() ? YEAR_OPTIONS.find(y => y.value === Number(info.data().gmpYear)) : null;
+    if (year) {
+      $('#stat-year').innerHTML = year.stat;
+      $('#about-year').textContent = year.text;
+    }
 
     const photo = profile?.exists() ? safeImage(profile.data().photo) : '';
     if (photo) $('#profile-photo').src = photo;
