@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Administration — Portfolio</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/admin.css" />
+  <script>
+    try {
+      const t = localStorage.getItem('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+</head>
+<body class="admin">
+
+<header class="admin-bar">
+  <div class="admin-bar-inner">
+    <a href="index.html" class="nav-logo">
+      <span class="logo-mark" aria-hidden="true">CC</span>
+      <span class="logo-text">Administration</span>
+    </a>
+    <div class="admin-user" id="admin-user" hidden>
+      <span class="user-email" id="user-email"></span>
+      <a href="index.html" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Voir le site ↗</a>
+      <button class="btn btn-small" id="logout" type="button">Déconnexion</button>
+    </div>
+  </div>
+</header>
+
+<main class="admin-main">
+
+  <!-- Firebase non configuré -->
+  <section class="state-card" id="state-setup" hidden>
+    <p class="eyebrow">Étape préalable</p>
+    <h1 class="section-title">Connecte ton projet Firebase</h1>
+    <p class="muted">Le site fonctionne déjà en mode statique. Pour publier des photos depuis cette page :</p>
+    <ol class="steps">
+      <li>Crée un projet sur <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a>.</li>
+      <li>Ajoute une <strong>application Web</strong> (icône <code>&lt;/&gt;</code>) et copie l'objet <code>firebaseConfig</code>.</li>
+      <li>Colle-le dans <code>js/firebase-config.js</code>.</li>
+      <li>Active <strong>Authentication → Google</strong> et crée une base <strong>Firestore</strong>.</li>
+      <li>Copie le contenu de <code>firestore.rules</code> dans l'onglet <strong>Règles</strong> de Firestore et publie.</li>
+    </ol>
+    <p class="muted">Le guide complet est dans le fichier <code>README.md</code> du dépôt.</p>
+  </section>
+
+  <!-- Connexion -->
+  <section class="state-card center" id="state-login" hidden>
+    <p class="eyebrow">Espace privé</p>
+    <h1 class="section-title">Connexion</h1>
+    <p class="muted">Seul le propriétaire du portfolio peut publier du contenu.</p>
+    <button class="btn google-btn" id="login" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Se connecter avec Google
+    </button>
+    <p class="form-status err" id="login-error" role="alert"></p>
+  </section>
+
+  <!-- Compte non autorisé -->
+  <section class="state-card center" id="state-denied" hidden>
+    <p class="eyebrow">Accès refusé</p>
+    <h1 class="section-title">Compte non autorisé</h1>
+    <p class="muted">Le compte <strong id="denied-email"></strong> n'est pas administrateur de ce portfolio.</p>
+    <button class="btn btn-ghost" id="logout-denied" type="button">Changer de compte</button>
+  </section>
+
+  <!-- Chargement -->
+  <section class="state-card center" id="state-loading">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="muted">Chargement…</p>
+  </section>
+
+  <!-- Tableau de bord -->
+  <section id="state-app" hidden>
+    <div class="tabs" role="tablist" aria-label="Sections de l'administration">
+      <button role="tab" type="button" class="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="true">Projets <span class="count" id="count-projects"></span></button>
+      <button role="tab" type="button" class="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages <span class="count badge" id="count-messages" hidden></span></button>
+      <button role="tab" type="button" class="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="false" tabindex="-1">Photo de profil</button>
+    </div>
+
+    <!-- Projets -->
+    <div class="panel" id="panel-projects" role="tabpanel" aria-labelledby="tab-projects">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Projets &amp; réalisations</h1>
+          <p class="muted">Les projets <strong>publiés</strong> remplacent les exemples affichés sur le site.</p>
+        </div>
+        <button class="btn" type="button" id="new-project">+ Nouveau projet</button>
+      </div>
+      <div class="empty-state" id="projects-empty" hidden>
+        <p>Aucun projet pour l'instant.</p>
+        <p class="muted">Crée ton premier projet, ou importe les 4 projets d'exemple du site pour leur ajouter des photos.</p>
+        <button class="btn btn-ghost" type="button" id="import-examples">Importer les projets d'exemple</button>
+      </div>
+      <div class="admin-grid" id="admin-projects"></div>
+    </div>
+
+    <!-- Messages -->
+    <div class="panel" id="panel-messages" role="tabpanel" aria-labelledby="tab-messages" hidden>
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Messages reçus</h1>
+          <p class="muted">Envoyés depuis le formulaire de contact du site.</p>
+        </div>
+        <button class="btn btn-ghost" type="button" id="refresh-messages">Actualiser</button>
+      </div>
+      <div class="empty-state" id="messages-empty" hidden><p>Aucun message pour le moment.</p></div>
+      <div class="messages" id="messages"></div>
+    </div>
+
+    <!-- Profil -->
+    <div class="panel" id="panel-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Photo de profil</h1>
+          <p class="muted">Affichée dans la section « À propos ». Format portrait conseillé (4:5), fond neutre, bonne lumière.</p>
+        </div>
+      </div>
+      <div class="profile-row">
+        <img id="profile-preview" class="profile-preview" src="assets/cenuel-chaffa.webp" alt="Photo de profil actuelle" />
+        <div class="profile-actions">
+          <label class="btn" for="profile-file">Choisir une photo…</label>
+          <input id="profile-file" type="file" accept="image/*" class="visually-hidden" />
+          <button class="btn btn-ghost" type="button" id="profile-reset">Rétablir la photo par défaut</button>
+          <p class="muted small" id="profile-status"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Éditeur de projet -->
+<dialog class="editor" id="editor" aria-labelledby="editor-title">
+  <form id="editor-form" method="dialog" novalidate>
+    <header class="editor-head">
+      <h2 id="editor-title">Nouveau projet</h2>
+      <button class="icon-btn" type="button" data-cancel aria-label="Fermer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="editor-body">
+      <div class="editor-fields">
+        <div class="field">
+          <label for="f-title">Titre *</label>
+          <input id="f-title" name="title" maxlength="120" required placeholder="Ex. Support de palier usiné" />
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="f-category">Catégorie</label>
+            <select id="f-category" name="category"></select>
+          </div>
+          <div class="field">
+            <label for="f-date">Date</label>
+            <input id="f-date" name="date" type="month" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-summary">Résumé (carte) <span class="hint" data-count="f-summary">0/240</span></label>
+          <textarea id="f-summary" name="summary" rows="2" maxlength="240" placeholder="Une ou deux phrases visibles sur la carte du projet."></textarea>
+        </div>
+        <div class="field">
+          <label for="f-description">Description détaillée</label>
+          <textarea id="f-description" name="description" rows="6" maxlength="5000" placeholder="Contexte, objectif, démarche, outils et machines utilisés, résultat obtenu, ce que tu as appris…"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-tags">Mots-clés (séparés par des virgules)</label>
+          <input id="f-tags" name="tags" maxlength="300" placeholder="SolidWorks, tournage, acier S235" />
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="f-link">Lien externe (optionnel)</label>
+            <input id="f-link" name="link" type="url" maxlength="400" placeholder="https://…" />
+          </div>
+          <div class="field">
+            <label for="f-order">Ordre d'affichage</label>
+            <input id="f-order" name="order" type="number" step="1" value="0" />
+          </div>
+        </div>
+        <div class="checks">
+          <label class="switch"><input type="checkbox" name="published" id="f-published" checked /><span></span> Publié sur le site</label>
+          <label class="switch"><input type="checkbox" name="featured" id="f-featured" /><span></span> À la une</label>
+        </div>
+      </div>
+
+      <div class="editor-photos">
+        <p class="photos-label">Photos <span class="hint" id="photos-count"></span></p>
+        <label class="dropzone" id="dropzone" for="f-files">
+          <input id="f-files" type="file" accept="image/*" multiple class="visually-hidden" />
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M12 4v12M7 9l5-5 5 5"/></svg>
+          <strong>Glisse tes photos ici</strong>
+          <span>ou clique pour choisir · compressées automatiquement</span>
+        </label>
+        <ul class="photo-list" id="photo-list"></ul>
+      </div>
+    </div>
+    <footer class="editor-foot">
+      <p class="muted small" id="editor-status" role="status"></p>
+      <button class="btn btn-ghost" type="button" data-cancel>Annuler</button>
+      <button class="btn" type="submit" id="editor-save">Enregistrer</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

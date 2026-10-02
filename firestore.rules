@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Règles de sécurité du portfolio.
+// - Tout le monde peut LIRE les projets publiés et la photo de profil.
+// - Tout le monde peut ENVOYER un message (formulaire de contact), sans pouvoir le relire.
+// - Seul l'administrateur (compte Google ci-dessous) peut écrire, modifier et lire les messages.
+// ⚠️ Remplace l'email si tu changes de compte administrateur (et dans js/firebase-config.js).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'chaffacenuel679@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    match /projects/{projectId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /projectImages/{imageId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'createdAt', 'read'])
+        && request.resource.data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt', 'read'])
+        && str(request.resource.data.name, 1, 100)
+        && str(request.resource.data.email, 3, 200)
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && str(request.resource.data.subject, 0, 200)
+        && str(request.resource.data.message, 5, 5000)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.read == false;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Tout le reste est interdit.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
