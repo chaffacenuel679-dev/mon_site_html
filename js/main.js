@@ -7,6 +7,7 @@ const root = document.documentElement;
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const finePointer = matchMedia('(pointer: fine)').matches;
 
 $('#year').textContent = new Date().getFullYear();
 
@@ -51,6 +52,8 @@ $$('main section[id]').forEach(s => sectionIO.observe(s));
 
 /* ---------------- Défilement : barre de progression, nav, frise ---------------- */
 const progress = $('.scroll-progress');
+const hero = $('#hero');
+const aboutPhoto = $('#profile-photo');
 const timeline = $('#timeline');
 const tlItems = $$('.tl-item', timeline);
 let ticking = false;
@@ -59,6 +62,14 @@ function onScroll() {
   const max = document.documentElement.scrollHeight - innerHeight;
   progress.style.setProperty('--p', max > 0 ? (y / max).toFixed(4) : 0);
   nav.classList.toggle('scrolled', y > 24);
+  nav.classList.toggle('on-dark', y < hero.offsetHeight - nav.offsetHeight);
+
+  if (!reduceMotion) {
+    const pr = aboutPhoto.getBoundingClientRect();
+    if (pr.bottom > 0 && pr.top < innerHeight) {
+      aboutPhoto.style.setProperty('--py', `${((pr.top + pr.height / 2 - innerHeight / 2) * -0.06).toFixed(1)}px`);
+    }
+  }
 
   const r = timeline.getBoundingClientRect();
   const mid = innerHeight * 0.6;
@@ -80,6 +91,31 @@ const revealIO = new IntersectionObserver(entries => {
     revealIO.unobserve(e.target);
   });
 }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+function splitTitle(title) {
+  let i = 0;
+  const walk = node => [...node.childNodes].forEach(child => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const frag = document.createDocumentFragment();
+      child.textContent.split(/(\s+)/).forEach(part => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.append(' '); return; }
+        const w = document.createElement('span');
+        w.className = 'w';
+        const inner = document.createElement('span');
+        inner.textContent = part;
+        inner.style.setProperty('--i', i++);
+        w.append(inner);
+        frag.append(w);
+      });
+      child.replaceWith(frag);
+    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== 'BR') walk(child);
+  });
+  title.setAttribute('aria-label', title.textContent.replace(/\s+/g, ' ').trim());
+  walk(title);
+  title.classList.add('split');
+}
+if (!reduceMotion) $$('.section-title').forEach(splitTitle);
+
 function observeReveal(scope = document) {
   $$('.reveal:not(.visible)', scope).forEach(el => revealIO.observe(el));
 }
@@ -93,6 +129,46 @@ $$('.skill-card').forEach(card => {
     card.style.setProperty('--my', `${e.clientY - r.top}px`);
   });
 });
+
+/* ---------------- Projets : illustrations et inclinaison 3D ---------------- */
+const ICONS = {
+  'Mécanique & CAO': '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  'Fabrication & Atelier': '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  'Électronique & Arduino': '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  'Programmation & Web': '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+  'Intelligence Artificielle': '<circle cx="5" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="12" cy="12" r="2.5"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 7l3 3.5M7 17l3-3.5M14 10.5l3-3.5M14 13.5l3 3.5"/>',
+  'Art & Astronomie': '<circle cx="12" cy="12" r="5"/><path d="M3.5 15.5c-1.2-2 3.5-5.6 9-7.4s10-1.7 10.9.3-3.5 5.4-9 7.2-9.7 1.9-10.9-.1z"/><path d="M4 4v3M2.5 5.5h3M19 19v2M18 20h2"/>',
+  Autre: '<path d="M3 21 21 3M7 21H3v-4M14 3h7v7"/><path d="M3 12h4M12 21v-4"/>'
+};
+
+function enhanceCards(scope = grid) {
+  $$('.project-card', scope).forEach((card, i) => {
+    if (card.dataset.enhanced) return;
+    card.dataset.enhanced = '1';
+    const thumb = $('.project-thumb', card);
+    if (thumb?.classList.contains('placeholder')) {
+      const art = (ICONS[card.dataset.category] || ICONS.Autre).replace(/\/>/g, ' pathLength="1"/>');
+      thumb.classList.add('has-art');
+      thumb.insertAdjacentHTML('beforeend', `<span class="thumb-art" aria-hidden="true"><svg viewBox="0 0 24 24">${art}</svg></span><span class="thumb-num" aria-hidden="true">${thumb.dataset.glyph || String(i + 1).padStart(2, '0')}</span>`);
+    }
+    if (!finePointer || reduceMotion) return;
+    card.append(el('span', { class: 'glare', 'aria-hidden': 'true' }));
+    card.addEventListener('pointermove', e => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+      card.classList.add('tilting');
+      card.style.setProperty('--ry', `${((px - 0.5) * 9).toFixed(2)}deg`);
+      card.style.setProperty('--rx', `${((0.5 - py) * 7).toFixed(2)}deg`);
+      card.style.setProperty('--gx', `${(px * 100).toFixed(1)}%`);
+      card.style.setProperty('--gy', `${(py * 100).toFixed(1)}%`);
+    });
+    card.addEventListener('pointerleave', () => {
+      card.classList.remove('tilting');
+      card.style.setProperty('--rx', '0deg');
+      card.style.setProperty('--ry', '0deg');
+    });
+  });
+}
 
 /* ---------------- Projets : filtres ---------------- */
 const grid = $('#projects-grid');
@@ -135,6 +211,7 @@ function applyFilter(cat, animate = true) {
   emptyMsg.hidden = visible > 0;
 }
 buildFilters();
+enhanceCards();
 
 /* ---------------- Projets : rendu depuis Firestore ---------------- */
 const projectsById = new Map();
@@ -196,6 +273,7 @@ async function loadRemoteContent() {
     list.forEach(p => projectsById.set(p.id, p));
     grid.replaceChildren(...list.map(renderProjectCard));
     buildFilters();
+    enhanceCards();
     observeReveal(grid);
   } catch (err) {
     console.warn('Contenu Firebase indisponible, affichage des projets par défaut.', err);
@@ -374,3 +452,114 @@ form.addEventListener('submit', async e => {
   }
 });
 form.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid')) e.target.removeAttribute('aria-invalid'); });
+
+/* =====================================================
+   EFFETS VISUELS
+   ===================================================== */
+
+/* ---- Texte qui s'écrit tout seul ---- */
+(function typewriter() {
+  const el = $('#typed');
+  if (!el || reduceMotion) return;
+  const words = ['des pièces mécaniques', 'des modèles 3D', 'des montages Arduino', 'des sites web', 'des solutions d\'IA'];
+  let w = 0, c = words[0].length, deleting = true;
+  const tick = () => {
+    const word = words[w];
+    c += deleting ? -1 : 1;
+    el.textContent = word.slice(0, c);
+    let delay = deleting ? 35 : 70;
+    if (!deleting && c === word.length) { deleting = true; delay = 2200; }
+    else if (deleting && c === 0) { deleting = false; w = (w + 1) % words.length; delay = 350; }
+    setTimeout(tick, delay);
+  };
+  setTimeout(tick, 3200);
+})();
+
+/* ---- Champ d'étoiles interactif (clin d'œil à l'astronomie) ---- */
+(function starfield() {
+  const canvas = $('#hero-stars');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0, stars = [], running = false, visible = true;
+  const mouse = { x: -9999, y: -9999 };
+
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    w = hero.clientWidth; h = hero.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(Math.min(120, (w * h) / 12000));
+    stars = Array.from({ length: n }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
+      r: Math.random() * 1.3 + 0.3, t: Math.random() * Math.PI * 2
+    }));
+  }
+
+  function draw(move = true) {
+    ctx.clearRect(0, 0, w, h);
+    for (const s of stars) {
+      if (move) {
+        s.x += s.vx; s.y += s.vy; s.t += 0.02;
+        if (s.x < -10) s.x = w + 10; else if (s.x > w + 10) s.x = -10;
+        if (s.y < -10) s.y = h + 10; else if (s.y > h + 10) s.y = -10;
+      }
+    }
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < stars.length; i++) {
+      const a = stars[i];
+      for (let j = i + 1; j < stars.length; j++) {
+        const b = stars[j];
+        const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+        if (d2 < 12100) {
+          ctx.strokeStyle = `rgba(150, 190, 240, ${(1 - Math.sqrt(d2) / 110) * 0.16})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+      const mx = a.x - mouse.x, my = a.y - mouse.y, md = Math.sqrt(mx * mx + my * my);
+      if (md < 170) {
+        ctx.strokeStyle = `rgba(240, 160, 102, ${(1 - md / 170) * 0.55})`;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
+      }
+    }
+    for (const s of stars) {
+      ctx.fillStyle = `rgba(225, 236, 250, ${0.35 + 0.45 * (0.5 + 0.5 * Math.sin(s.t))})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function loop() {
+    if (!running) return;
+    draw();
+    requestAnimationFrame(loop);
+  }
+  function update() {
+    const should = visible && !document.hidden && !reduceMotion;
+    if (should && !running) { running = true; requestAnimationFrame(loop); }
+    else if (!should) running = false;
+  }
+
+  resize();
+  draw(false);
+  addEventListener('resize', () => { resize(); draw(false); });
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; update(); }).observe(hero);
+  document.addEventListener('visibilitychange', update);
+  hero.addEventListener('pointermove', e => {
+    const r = hero.getBoundingClientRect();
+    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+  });
+  hero.addEventListener('pointerleave', () => { mouse.x = mouse.y = -9999; });
+  update();
+})();
+
+/* ---- Boutons magnétiques ---- */
+if (finePointer && !reduceMotion) {
+  $$('.magnet').forEach(btn => {
+    btn.addEventListener('pointermove', e => {
+      const r = btn.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      btn.style.transform = `translate(${dx * 0.22}px, ${dy * 0.32}px)`;
+    });
+    btn.addEventListener('pointerleave', () => { btn.style.transform = ''; });
+  });
+}
