@@ -8,21 +8,31 @@ export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.proj
 export { ADMIN_EMAIL };
 
 let appPromise;
+function getApp() {
+  appPromise ??= import(`${CDN}/firebase-app.js`).then(m => m.getApps()[0] || m.initializeApp(firebaseConfig));
+  return appPromise;
+}
 
-/** Charge le SDK et renvoie { app, fs } où fs contient les fonctions Firestore. */
-export function getFirestoreKit() {
+const kits = {};
+
+/**
+ * Charge Firestore et renvoie { app, db, fs } où fs contient les fonctions Firestore.
+ * - lite: true  → Firestore Lite (≈ 35 Ko compressés) : lecture et écriture simples, idéal pour le site public.
+ * - lite: false → Firestore complet (≈ 175 Ko compressés) : utilisé par la page d'administration.
+ */
+export function getFirestoreKit({ lite = false } = {}) {
   if (!isConfigured) return Promise.reject(new Error('Firebase non configuré'));
-  appPromise ??= (async () => {
-    const [{ initializeApp }, fs] = await Promise.all([
-      import(`${CDN}/firebase-app.js`),
-      import(`${CDN}/firebase-firestore.js`)
+  const key = lite ? 'lite' : 'full';
+  kits[key] ??= (async () => {
+    const [app, fs] = await Promise.all([
+      getApp(),
+      import(`${CDN}/${lite ? 'firebase-firestore-lite.js' : 'firebase-firestore.js'}`)
     ]);
-    const app = initializeApp(firebaseConfig);
     const db = fs.getFirestore(app);
     if (USE_EMULATORS) fs.connectFirestoreEmulator(db, '127.0.0.1', 8080);
     return { app, db, fs };
   })();
-  return appPromise;
+  return kits[key];
 }
 
 let authPromise;
@@ -30,8 +40,7 @@ let authPromise;
 /** Charge Firebase Auth (utilisé uniquement par la page d'administration). */
 export function getAuthKit() {
   authPromise ??= (async () => {
-    const { app } = await getFirestoreKit();
-    const authMod = await import(`${CDN}/firebase-auth.js`);
+    const [app, authMod] = await Promise.all([getApp(), import(`${CDN}/firebase-auth.js`)]);
     const auth = authMod.getAuth(app);
     if (USE_EMULATORS) authMod.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     auth.languageCode = 'fr';
