@@ -4,6 +4,8 @@ import {
 import { sanitizeSkills, renderSkillCard, YEAR_OPTIONS } from './skills.js';
 
 window.__siteReady = true;
+// Le site public n'a besoin que de lectures simples : Firestore Lite suffit (≈ 5 fois plus léger)
+const getDb = () => getFirestoreKit({ lite: true });
 const root = document.documentElement;
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -82,6 +84,14 @@ function onScroll() {
 addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
 addEventListener('resize', onScroll);
 onScroll();
+
+/* ---------------- Économie d'énergie : animations en pause hors de l'écran ---------------- */
+// La zone cachée sous la barre de navigation fixe ne compte pas comme « visible »
+const VISIBLE_ZONE = { rootMargin: '-90px 0px 0px 0px' };
+const animIO = new IntersectionObserver(entries => {
+  entries.forEach(e => e.target.classList.toggle('anim-off', !e.isIntersecting));
+}, VISIBLE_ZONE);
+$$('#hero, .ticker-wrap, #about, #competences, #contact').forEach(s => animIO.observe(s));
 
 /* ---------------- Révélation au défilement ---------------- */
 const revealIO = new IntersectionObserver(entries => {
@@ -261,15 +271,16 @@ function renderProjectCard(p, index) {
 }
 
 async function loadRemoteContent() {
-  if (!isConfigured) return;
+  const safety = setTimeout(() => root.classList.remove('remote-loading'), 4000);
   try {
-    const { db, fs } = await getFirestoreKit();
-    const [snap, profile, skills, info] = await Promise.all([
+    const { db, fs } = await getDb();
+    // Chaque contenu est indépendant : une erreur sur l'un n'empêche pas d'afficher les autres
+    const [snap, profile, skills, info] = (await Promise.allSettled([
       fs.getDocs(fs.query(fs.collection(db, 'projects'), fs.where('published', '==', true))),
-      fs.getDoc(fs.doc(db, 'settings', 'profile')).catch(() => null),
-      fs.getDoc(fs.doc(db, 'settings', 'skills')).catch(() => null),
-      fs.getDoc(fs.doc(db, 'settings', 'info')).catch(() => null)
-    ]);
+      fs.getDoc(fs.doc(db, 'settings', 'profile')),
+      fs.getDoc(fs.doc(db, 'settings', 'skills')),
+      fs.getDoc(fs.doc(db, 'settings', 'info'))
+    ])).map(r => (r.status === 'fulfilled' ? r.value : null));
 
     // Compétences gérées depuis l'administration
     const cards = skills?.exists() ? sanitizeSkills(skills.data().cards) : [];
@@ -288,9 +299,13 @@ async function loadRemoteContent() {
     }
 
     const photo = profile?.exists() ? safeImage(profile.data().photo) : '';
-    if (photo) $('#profile-photo').src = photo;
+    if (photo) {
+      const img = $('#profile-photo');
+      img.removeAttribute('srcset');   // sinon le navigateur garderait la photo par défaut
+      img.src = photo;
+    }
 
-    if (snap.empty) return; // on garde les projets par défaut
+    if (!snap || snap.empty) return; // on garde les projets par défaut
     const list = sortProjects(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     list.forEach(p => projectsById.set(p.id, p));
     grid.replaceChildren(...list.map(renderProjectCard));
@@ -299,14 +314,28 @@ async function loadRemoteContent() {
     observeReveal(grid);
   } catch (err) {
     console.warn('Contenu Firebase indisponible, affichage des projets par défaut.', err);
+  } finally {
+    clearTimeout(safety);
+    root.classList.remove('remote-loading');
   }
 }
-loadRemoteContent();
+// Les contenus Firebase sont plus bas dans la page : on les charge juste après l'affichage du haut de page,
+// pour ne pas ralentir l'apparition du hero. Des squelettes s'affichent pendant l'attente.
+if (isConfigured) {
+  root.classList.add('remote-loading');
+  const whenIdle = fn => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1200 }) : setTimeout(fn, 200));
+  let started = false;
+  const start = () => { if (!started) { started = true; whenIdle(loadRemoteContent); } };
+  if (document.readyState === 'complete') start();
+  addEventListener('load', start, { once: true });
+  setTimeout(start, 1500);   // sur connexion lente, on n'attend pas la fin du chargement des polices
+}
 
 /* ---------------- Fenêtre de détail d'un projet ---------------- */
 const modal = $('#project-modal');
 const stage = $('#pm-stage');
-const pmImage = $('#pm-image');
+const pmImage = Object.assign(document.createElement('img'), { id: 'pm-image', alt: '' });
+stage.prepend(pmImage);
 const pmLoader = $('#pm-loader');
 const pmThumbs = $('#pm-thumbs');
 const imageCache = new Map();
@@ -316,7 +345,7 @@ let openToken = 0;
 
 async function fetchImages(p) {
   if (imageCache.has(p.id)) return imageCache.get(p.id);
-  const { db, fs } = await getFirestoreKit();
+  const { db, fs } = await getDb();
   const snap = await fs.getDocs(fs.query(
     fs.collection(db, 'projectImages'),
     fs.where('projectId', '==', p.id),
@@ -460,7 +489,7 @@ form.addEventListener('submit', async e => {
   submitBtn.disabled = true;
   setStatus('Envoi en cours…');
   try {
-    const { db, fs } = await getFirestoreKit();
+    const { db, fs } = await getDb();
     await fs.addDoc(fs.collection(db, 'messages'), { ...data, createdAt: fs.serverTimestamp(), read: false });
     try { localStorage.setItem('lastMessageAt', String(Date.now())); } catch (e) { /* ignoré */ }
     form.reset();
@@ -486,6 +515,7 @@ form.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid'))
   const words = ['des pièces mécaniques', 'des modèles 3D', 'des montages Arduino', 'des sites web', 'des solutions d\'IA'];
   let w = 0, c = words[0].length, deleting = true;
   const tick = () => {
+    if (document.hidden || hero.classList.contains('anim-off')) { setTimeout(tick, 600); return; }
     const word = words[w];
     c += deleting ? -1 : 1;
     el.textContent = word.slice(0, c);
@@ -502,14 +532,13 @@ form.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid'))
   const canvas = $('#hero-stars');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  let w = 0, h = 0, stars = [], running = false, visible = true;
+  const LINK = 110, LINK2 = LINK * LINK, MOUSE = 170;
+  const BUCKETS = 4;            // lignes et étoiles regroupées par opacité : 8 tracés par image au lieu de plusieurs centaines
+  const FRAME_MS = 1000 / 30;   // 30 images/s suffisent pour un mouvement aussi lent
+  let w = 0, h = 0, stars = [], running = false, visible = true, last = 0;
   const mouse = { x: -9999, y: -9999 };
 
-  function resize() {
-    const dpr = Math.min(devicePixelRatio || 1, 2);
-    w = hero.clientWidth; h = hero.clientHeight;
-    canvas.width = w * dpr; canvas.height = h * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function seed() {
     const n = Math.round(Math.min(120, (w * h) / 12000));
     stars = Array.from({ length: n }, () => ({
       x: Math.random() * w, y: Math.random() * h,
@@ -518,59 +547,83 @@ form.addEventListener('input', e => { if (e.target.hasAttribute('aria-invalid'))
     }));
   }
 
-  function draw(move = true) {
+  function resize() {
+    const nw = hero.clientWidth, nh = hero.clientHeight;
+    if (nw !== w || !stars.length) { w = nw; h = nh; seed(); }
+    else if (nh !== h) {
+      // Sur mobile, la barre d'adresse change la hauteur pendant le défilement : on garde les mêmes étoiles
+      stars.forEach(s => { s.y *= nh / h; });
+      h = nh;
+    }
+    const dpr = Math.min(devicePixelRatio || 1, 1.5);
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw(step = 0) {
     ctx.clearRect(0, 0, w, h);
     for (const s of stars) {
-      if (move) {
-        s.x += s.vx; s.y += s.vy; s.t += 0.02;
-        if (s.x < -10) s.x = w + 10; else if (s.x > w + 10) s.x = -10;
-        if (s.y < -10) s.y = h + 10; else if (s.y > h + 10) s.y = -10;
-      }
+      if (!step) break;
+      s.x += s.vx * step; s.y += s.vy * step; s.t += 0.02 * step;
+      if (s.x < -10) s.x = w + 10; else if (s.x > w + 10) s.x = -10;
+      if (s.y < -10) s.y = h + 10; else if (s.y > h + 10) s.y = -10;
     }
-    ctx.lineWidth = 0.6;
+    const links = Array.from({ length: BUCKETS }, () => new Path2D());
+    const toMouse = Array.from({ length: BUCKETS }, () => new Path2D());
     for (let i = 0; i < stars.length; i++) {
       const a = stars[i];
       for (let j = i + 1; j < stars.length; j++) {
         const b = stars[j];
         const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
-        if (d2 < 12100) {
-          ctx.strokeStyle = `rgba(150, 190, 240, ${(1 - Math.sqrt(d2) / 110) * 0.16})`;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        if (d2 < LINK2) {
+          const k = Math.min(BUCKETS - 1, Math.floor((1 - Math.sqrt(d2) / LINK) * BUCKETS));
+          links[k].moveTo(a.x, a.y); links[k].lineTo(b.x, b.y);
         }
       }
-      const mx = a.x - mouse.x, my = a.y - mouse.y, md = Math.sqrt(mx * mx + my * my);
-      if (md < 170) {
-        ctx.strokeStyle = `rgba(240, 160, 102, ${(1 - md / 170) * 0.55})`;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
+      const mx = a.x - mouse.x, my = a.y - mouse.y, m2 = mx * mx + my * my;
+      if (m2 < MOUSE * MOUSE) {
+        const k = Math.min(BUCKETS - 1, Math.floor((1 - Math.sqrt(m2) / MOUSE) * BUCKETS));
+        toMouse[k].moveTo(a.x, a.y); toMouse[k].lineTo(mouse.x, mouse.y);
       }
     }
+    ctx.lineWidth = 0.6;
+    links.forEach((path, k) => { ctx.strokeStyle = `rgba(150, 190, 240, ${((k + 0.5) / BUCKETS) * 0.16})`; ctx.stroke(path); });
+    if (mouse.x > -9999) toMouse.forEach((path, k) => { ctx.strokeStyle = `rgba(240, 160, 102, ${((k + 0.5) / BUCKETS) * 0.55})`; ctx.stroke(path); });
+    const dots = Array.from({ length: BUCKETS }, () => new Path2D());
     for (const s of stars) {
-      ctx.fillStyle = `rgba(225, 236, 250, ${0.35 + 0.45 * (0.5 + 0.5 * Math.sin(s.t))})`;
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      const k = Math.min(BUCKETS - 1, Math.floor((0.5 + 0.5 * Math.sin(s.t)) * BUCKETS));
+      dots[k].moveTo(s.x + s.r, s.y); dots[k].arc(s.x, s.y, s.r, 0, Math.PI * 2);
     }
+    dots.forEach((path, k) => { ctx.fillStyle = `rgba(225, 236, 250, ${0.35 + 0.45 * ((k + 0.5) / BUCKETS)})`; ctx.fill(path); });
   }
 
-  function loop() {
+  function loop(ts) {
     if (!running) return;
-    draw();
+    if (ts - last >= FRAME_MS) {
+      const step = last ? Math.min(3, (ts - last) / (1000 / 60)) : 1;
+      last = ts;
+      draw(step);
+    }
     requestAnimationFrame(loop);
   }
   function update() {
     const should = visible && !document.hidden && !reduceMotion;
-    if (should && !running) { running = true; requestAnimationFrame(loop); }
+    if (should && !running) { running = true; last = 0; requestAnimationFrame(loop); }
     else if (!should) running = false;
   }
 
   resize();
-  draw(false);
-  addEventListener('resize', () => { resize(); draw(false); });
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; update(); }).observe(hero);
+  draw();
+  addEventListener('resize', () => { resize(); draw(); });
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; update(); }, VISIBLE_ZONE).observe(hero);
   document.addEventListener('visibilitychange', update);
-  hero.addEventListener('pointermove', e => {
-    const r = hero.getBoundingClientRect();
-    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
-  });
-  hero.addEventListener('pointerleave', () => { mouse.x = mouse.y = -9999; });
+  if (finePointer) {
+    hero.addEventListener('pointermove', e => {
+      const r = hero.getBoundingClientRect();
+      mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+    });
+    hero.addEventListener('pointerleave', () => { mouse.x = mouse.y = -9999; });
+  }
   update();
 })();
 

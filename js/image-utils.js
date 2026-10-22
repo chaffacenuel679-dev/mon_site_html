@@ -60,7 +60,7 @@ export function encode(img, { maxDim, maxChars }) {
 }
 
 export const FULL = { maxDim: 2000, maxChars: 900_000 };   // photo affichée en grand
-export const THUMB = { maxDim: 720, maxChars: 110_000 };   // vignette de couverture
+export const THUMB = { maxDim: 720, maxChars: 70_000 };    // vignette de couverture (téléchargée par chaque visiteur : on la garde légère)
 export const PROFILE = { maxDim: 1000, maxChars: 450_000 }; // photo de profil
 
 /** Prépare une photo : version grande + vignette. */

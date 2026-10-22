@@ -190,20 +190,24 @@ strong { font-weight: 700; }
 }
 .hero ::selection { background: var(--h-accent); color: #0a1626; }
 .hero-stars { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
-.hero-glow { position: absolute; border-radius: 50%; filter: blur(80px); z-index: -2; pointer-events: none; opacity: .55; }
+.hero-glow { position: absolute; border-radius: 50%; filter: blur(80px); z-index: -2; pointer-events: none; opacity: .55; will-change: transform; }
 .hero-glow.g1 { width: 520px; height: 520px; right: 4%; top: 12%; background: radial-gradient(circle, #e3955c55, transparent 70%); animation: drift1 18s ease-in-out infinite alternate; }
 .hero-glow.g2 { width: 460px; height: 460px; left: -6%; bottom: -10%; background: radial-gradient(circle, #2f6fd040, transparent 70%); animation: drift2 22s ease-in-out infinite alternate; }
 .hero-grid-bg {
-  position: absolute; inset: 0; pointer-events: none; z-index: -1;
+  position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden;
+  mask-image: radial-gradient(ellipse 75% 75% at 65% 45%, #000 25%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 65% 45%, #000 25%, transparent 80%);
+}
+/* La grille glisse grâce à transform : animée par la carte graphique, sans repeindre la page */
+.hero-grid-bg::before {
+  content: ''; position: absolute; inset: -96px 0 0 -96px;
   background-image:
     linear-gradient(var(--h-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--h-line) 1px, transparent 1px),
     linear-gradient(rgba(138, 178, 230, .05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(138, 178, 230, .05) 1px, transparent 1px);
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
-  mask-image: radial-gradient(ellipse 75% 75% at 65% 45%, #000 25%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 75% 75% at 65% 45%, #000 25%, transparent 80%);
-  animation: gridPan 40s linear infinite;
+  animation: gridPan 40s linear infinite; will-change: transform;
 }
 .hero-inner { position: relative; display: grid; grid-template-columns: 1fr 1.05fr; gap: 3rem; align-items: center; }
 .hero-tag {
@@ -354,9 +358,14 @@ strong { font-weight: 700; }
 .about-media { position: relative; }
 .about-photo { will-change: transform; }
 .photo-ring {
-  padding: 3px; border-radius: calc(var(--radius) + 3px);
-  background: conic-gradient(from var(--ring), var(--accent), transparent 30%, #2f6fd0 55%, transparent 75%, var(--accent));
-  animation: ring 7s linear infinite;
+  position: relative; padding: 3px; border-radius: calc(var(--radius) + 3px);
+  overflow: hidden; isolation: isolate;
+}
+.photo-ring::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 170%; aspect-ratio: 1; z-index: -1;
+  translate: -50% -50%;
+  background: conic-gradient(var(--accent), transparent 30%, #2f6fd0 55%, transparent 75%, var(--accent));
+  animation: spin 7s linear infinite; will-change: transform;
 }
 .photo-ring .photo-frame { border-radius: var(--radius); }
 .photo-frame { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--bg-alt); aspect-ratio: 4 / 5; }
@@ -417,9 +426,9 @@ strong { font-weight: 700; }
   background: conic-gradient(from var(--ring), #e3955c, transparent 35%, #5b8fe0 60%, transparent 80%, #e3955c);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  opacity: 0; transition: opacity .4s; animation: ring 4s linear infinite;
+  opacity: 0; transition: opacity .4s; animation: ring 4s linear infinite paused;
 }
-.skill-card:hover::after { opacity: 1; }
+.skill-card:hover::after { opacity: 1; animation-play-state: running; }
 .skill-card:hover::before { opacity: 1; }
 .skill-head { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.4rem; }
 .skill-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--dark-line); color: var(--dark-accent); }
@@ -427,12 +436,13 @@ strong { font-weight: 700; }
 .skill-card:hover .skill-icon svg { animation: spin 6s linear infinite; }
 .skill-cat { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dark-muted); }
 .skill-card h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.25rem; line-height: 1.25; }
-.levels li { display: grid; grid-template-columns: 1fr auto; column-gap: .8rem; row-gap: .45rem; padding: .55rem 0; }
+/* Nom et niveau sur la même ligne ; le niveau passe à la ligne si le nom est trop long (plus de débordement) */
+.levels li { display: flex; flex-wrap: wrap; align-items: center; column-gap: .8rem; row-gap: .45rem; padding: .55rem 0; }
 .levels li + li { border-top: 1px solid var(--dark-line); }
-.levels span { font-size: .88rem; }
-.levels em { font-style: normal; font-family: var(--font-mono); font-size: .68rem; letter-spacing: .06em; color: var(--dark-accent); align-self: center; }
+.levels span { flex: 1 1 auto; min-width: 0; font-size: .88rem; overflow-wrap: break-word; }
+.levels em { margin-left: auto; font-style: normal; font-family: var(--font-mono); font-size: .68rem; letter-spacing: .06em; color: var(--dark-accent); white-space: nowrap; }
 .levels i {
-  grid-column: 1 / -1; height: 4px; border-radius: 2px;
+  flex: 0 0 100%; height: 4px; border-radius: 2px;
   background:
     linear-gradient(90deg, transparent calc(20% - 2px), var(--dark-surface) 0 20%, transparent 0 calc(40% - 2px), var(--dark-surface) 0 40%, transparent 0 calc(60% - 2px), var(--dark-surface) 0 60%, transparent 0 calc(80% - 2px), var(--dark-surface) 0 80%, transparent 0),
     linear-gradient(90deg, var(--dark-accent) 0 0) 0 0 / calc(var(--lvl, 0) * 20%) 100% no-repeat,
@@ -612,6 +622,22 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 .to-top { text-decoration: none; transition: color .2s; }
 .to-top:hover { color: var(--dark-accent); }
 
+/* ---------- Économie d'énergie ---------- */
+/* Les sections hors écran mettent leurs animations en pause (classe posée par main.js) */
+.anim-off, .anim-off *, .anim-off *::before, .anim-off *::after { animation-play-state: paused !important; }
+
+/* Pendant le chargement des contenus Firebase : squelettes au lieu des anciens contenus d'exemple */
+.remote-loading #projects-grid .project-card > *, .remote-loading .skills-grid .skill-card > * { visibility: hidden; }
+.remote-loading #filters { visibility: hidden; }
+.remote-loading #projects-grid .project-card {
+  background: linear-gradient(90deg, var(--bg-alt) 25%, var(--line) 50%, var(--bg-alt) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s infinite; min-height: 22rem;
+}
+.remote-loading .skills-grid .skill-card {
+  background: linear-gradient(90deg, var(--dark-surface) 25%, var(--dark-line) 50%, var(--dark-surface) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
 /* ---------- Keyframes ---------- */
 @keyframes fadeUp { to { opacity: 1; transform: none; } }
 @keyframes lineUp { to { transform: none; } }
@@ -625,7 +651,7 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 @keyframes spinBack { to { transform: rotate(-360deg); } }
 @keyframes drift1 { to { transform: translate(-80px, 60px) scale(1.15); } }
 @keyframes drift2 { to { transform: translate(90px, -50px) scale(1.1); } }
-@keyframes gridPan { to { background-position: 96px 96px, 96px 96px, 24px 24px, 24px 24px; } }
+@keyframes gridPan { to { transform: translate(96px, 96px); } }
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes sweep { 0%, 60% { left: -60%; } 100% { left: 130%; } }
 @keyframes pulseGreen { 0% { box-shadow: 0 0 0 0 #4ade8099; } 70%, 100% { box-shadow: 0 0 0 9px transparent; } }
@@ -661,7 +687,8 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 }
 @media (max-width: 560px) {
   .container, .nav-inner { width: calc(100% - 2rem); }
-  .logo-text { display: none; }
+  /* Nom masqué visuellement mais toujours lu par les lecteurs d'écran */
+  .logo-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .hero-tag { font-size: .64rem; letter-spacing: .04em; }
   .hero-stats dd { font-size: 1.05rem; }
   .hero-stats > div + div { padding-left: .8rem; }
@@ -674,5 +701,5 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
-  .gear-a, .gear-b, .ticker-track, .hero-glow, .hero-grid-bg { animation: none !important; }
+  .gear-a, .gear-b, .ticker-track, .hero-glow, .hero-grid-bg::before, .photo-ring::before { animation: none !important; }
 }

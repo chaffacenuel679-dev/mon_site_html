@@ -100,6 +100,10 @@
         <p class="muted">Crée ton premier projet, ou importe les 4 projets d'exemple du site pour leur ajouter des photos.</p>
         <button class="btn btn-ghost" type="button" id="import-examples">Importer les projets d'exemple</button>
       </div>
+      <p class="notice" id="covers-note" hidden>
+        <span id="covers-text"></span>
+        <button class="btn btn-small" type="button" id="covers-fix">Alléger maintenant</button>
+      </p>
       <div class="admin-grid" id="admin-projects"></div>
     </div>
 
@@ -173,7 +177,7 @@
       <div class="editor-fields">
         <div class="field">
           <label for="f-title">Titre *</label>
-          <input id="f-title" name="title" maxlength="120" required placeholder="Ex. Support de palier usiné" />
+          <input id="f-title" name="title" type="text" maxlength="120" required placeholder="Ex. Support de palier usiné" />
         </div>
         <div class="form-row">
           <div class="field">
@@ -195,7 +199,7 @@
         </div>
         <div class="field">
           <label for="f-tags">Mots-clés (séparés par des virgules)</label>
-          <input id="f-tags" name="tags" maxlength="300" placeholder="SolidWorks, tournage, acier S235" />
+          <input id="f-tags" name="tags" type="text" maxlength="300" placeholder="SolidWorks, tournage, acier S235" />
         </div>
         <div class="form-row">
           <div class="field">
@@ -215,7 +219,7 @@
 
       <div class="editor-photos">
         <p class="photos-label">Photos <span class="hint" id="photos-count"></span></p>
-        <label class="dropzone" id="dropzone" for="f-files">
+        <label class="dropzone" id="dropzone">
           <input id="f-files" type="file" accept="image/*" multiple class="visually-hidden" />
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M12 4v12M7 9l5-5 5 5"/></svg>
           <strong>Glisse tes photos ici</strong>
@@ -245,7 +249,7 @@
       <div class="form-row">
         <div class="field">
           <label for="s-category">Petit libellé (au-dessus du titre)</label>
-          <input id="s-category" maxlength="60" placeholder="Ex. Mécanique" />
+          <input id="s-category" type="text" maxlength="60" placeholder="Ex. Mécanique" />
         </div>
         <div class="field">
           <label for="s-icon">Icône</label>
@@ -254,7 +258,7 @@
       </div>
       <div class="field">
         <label for="s-title">Titre de la carte *</label>
-        <input id="s-title" maxlength="80" required placeholder="Ex. Génie Mécanique" />
+        <input id="s-title" type="text" maxlength="80" required placeholder="Ex. Génie Mécanique" />
       </div>
       <div>
         <p class="photos-label">Compétences de la carte</p>

@@ -3,7 +3,7 @@ import {
   safeImage, safeLink, formatMonth, sortProjects
 } from './firebase.js';
 import { LEVELS, SKILL_ICONS, DEFAULT_SKILLS, YEAR_OPTIONS, sanitizeSkills, renderSkillCard } from './skills.js';
-import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE } from './image-utils.js';
+import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE, THUMB } from './image-utils.js';
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -134,7 +134,40 @@ async function loadProjects() {
   }
 }
 
+// Couvertures plus lourdes que la limite actuelle (anciens envois) : téléchargées par chaque visiteur
+const heavyCovers = () => projects.filter(p => p.coverId && (p.cover || '').length > THUMB.maxChars + 5000);
+
+function renderCoversNote() {
+  const heavy = heavyCovers();
+  $('#covers-note').hidden = !heavy.length;
+  if (!heavy.length) return;
+  const kb = Math.round(heavy.reduce((t, p) => t + p.cover.length - THUMB.maxChars * 0.8, 0) / 1024);
+  $('#covers-text').textContent = `${heavy.length} couverture(s) de projet peuvent être allégées (environ ${kb} Ko de moins à télécharger pour chaque visiteur, sans perte visible).`;
+}
+
+$('#covers-fix').addEventListener('click', async e => {
+  const button = e.currentTarget;
+  button.disabled = true;
+  let before = 0, after = 0;
+  try {
+    for (const p of heavyCovers()) {
+      const snap = await fs.getDoc(fs.doc(db, 'projectImages', p.coverId));
+      if (!snap.exists()) continue;
+      const cover = await thumbFromDataUrl(safeImage(snap.data().data));
+      if (cover.length >= p.cover.length) continue;
+      await fs.updateDoc(fs.doc(db, 'projects', p.id), { cover, updatedAt: fs.serverTimestamp() });
+      before += p.cover.length; after += cover.length;
+      p.cover = cover;
+    }
+    toast(after ? `Couvertures allégées : ${Math.round(before / 1024)} Ko → ${Math.round(after / 1024)} Ko.` : 'Rien à alléger.');
+    renderProjects();
+  } catch (err) {
+    console.error(err); toast(explain(err), 'err');
+  } finally { button.disabled = false; }
+});
+
 function renderProjects() {
+  renderCoversNote();
   $('#count-projects').textContent = projects.length ? `(${projects.length})` : '';
   $('#projects-empty').hidden = projects.length > 0;
   $('#admin-projects').replaceChildren(...projects.map((p, i) => {
@@ -272,6 +305,7 @@ async function openEditor(p = null) {
   }
   updateCounters();
   renderPhotos();
+  state.snapshot = formSnapshot();
   editor.showModal();
   form.elements.title.focus();
 
@@ -359,9 +393,12 @@ const dz = $('#dropzone');
 ['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
 dz.addEventListener('drop', e => addFiles(e.dataTransfer.files));
 
+// Instantané des champs texte à l'ouverture, pour détecter les modifications non enregistrées
+const formSnapshot = () => JSON.stringify([...new FormData(form)].filter(([, v]) => typeof v === 'string'));
+
 function closeEditor() {
   if (busy) return;
-  const dirty = state && (state.images.some(i => !i.id) || state.removed.length);
+  const dirty = state && (state.images.some(i => !i.id) || state.removed.length || formSnapshot() !== state.snapshot);
   if (dirty && !confirm('Fermer sans enregistrer les modifications ?')) return;
   editor.close();
 }

@@ -116,6 +116,7 @@ code { font-family: var(--font-mono); font-size: .85em; background: var(--bg-alt
 .editor-foot p { margin-right: auto; }
 
 /* Compétences */
+.notice .btn { margin-left: .6rem; }
 .notice { padding: .9rem 1.1rem; border-radius: 8px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size: .9rem; margin-bottom: 1.2rem; }
 .skills-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1.2rem; }
 .skill-admin-card { background: var(--dark-bg); color: var(--dark-ink); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid var(--dark-line); }

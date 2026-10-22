@@ -19,7 +19,8 @@ js/firebase.js        Chargement du SDK Firebase
 js/firebase-config.js ← LE SEUL FICHIER À REMPLIR
 firestore.rules       Règles de sécurité de la base de données
 firebase.json         Configuration pour la CLI Firebase (optionnelle)
-assets/               Photo de profil et icône
+sitemap.xml           Plan du site pour Google
+assets/               Photos de profil (3 tailles), image de partage, icône
 ```
 
 Tant que `js/firebase-config.js` est vide, le site fonctionne en **mode statique** :
@@ -109,6 +110,24 @@ dans Firebase pour que tu puisses leur ajouter des photos.
   (pas lire ceux des autres). Les règles ont été testées automatiquement (25 scénarios).
 - Si tu changes un jour de compte administrateur, modifie l'email **à deux endroits** :
   `firestore.rules` et `js/firebase-config.js`.
+- **Légèreté sur mobile** : le site public utilise **Firestore Lite** (≈ 35 Ko au lieu de ≈ 175 Ko),
+  charge les contenus Firebase juste après l'affichage du haut de page (des squelettes
+  s'affichent pendant l'attente) et met en pause les animations qui ne sont pas à l'écran.
+  La page d'administration utilise le SDK Firebase complet.
+- **Couvertures de projet** : elles sont téléchargées par chaque visiteur, elles sont donc
+  limitées à ≈ 50 Ko. Si l'admin affiche « couvertures pouvant être allégées », clique sur
+  **Alléger maintenant** (les photos en grand ne changent pas).
+
+## Partage et référencement Google
+- **Aperçu du lien** (WhatsApp, LinkedIn, Facebook…) : image `assets/og-image.jpg` (1200×630).
+  Pour vérifier l'aperçu : <https://www.linkedin.com/post-inspector/> ou
+  <https://developers.facebook.com/tools/debug/> (ces outils servent aussi à rafraîchir
+  un ancien aperçu resté en cache).
+- **Apparaître sur Google** : crée une propriété sur <https://search.google.com/search-console>
+  avec l'adresse du site (type « Préfixe d'URL »), vérifie-la, puis envoie le plan du site
+  `https://chaffacenuel679-dev.github.io/mon_site_html/sitemap.xml` (menu *Sitemaps*).
+  Le site contient déjà des données structurées (schema.org `Person`) pour que Google
+  comprenne qui tu es.
 
 ## Conseils pour des photos vraiment professionnelles
 - Lumière naturelle, pas de contre-jour ; évite le flash direct sur le métal.
