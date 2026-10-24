@@ -11,13 +11,13 @@ const PAGE_WIDTH = 515, SIDE_WIDTH = 150, GAP = 22, MAIN_WIDTH = PAGE_WIDTH - SI
 
 const L = {
   fr: {
-    profile: 'Profil', education: 'Formation', experience: 'Expériences', projects: 'Projets & réalisations',
+    profile: 'Profil', education: 'Formation', experience: 'Expériences professionnelles', projects: 'Projets & réalisations',
     skills: 'Compétences', languages: 'Langues', interests: "Centres d'intérêt", contact: 'Contact',
     portfolio: 'Portfolio', scan: 'Scannez pour voir mes projets', updated: 'CV mis à jour le {d}',
     file: 'CV de Cénuel CHAFFA'
   },
   en: {
-    profile: 'Profile', education: 'Education', experience: 'Experience', projects: 'Projects',
+    profile: 'Profile', education: 'Education', experience: 'Professional experience', projects: 'Projects',
     skills: 'Skills', languages: 'Languages', interests: 'Interests', contact: 'Contact',
     portfolio: 'Portfolio', scan: 'Scan to see my projects', updated: 'CV updated on {d}',
     file: 'CV of Cénuel CHAFFA'

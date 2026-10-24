@@ -101,7 +101,11 @@ dans Firebase pour que tu puisses leur ajouter des photos.
 - **Messages** : tout ce que les visiteurs envoient via le formulaire de contact.
 - **Compétences** : ajoute, modifie, réordonne ou supprime les cartes de compétences ;
   chaque compétence a un niveau (Notions, Débutant, Intermédiaire, Avancé, Expert) ou un simple point.
-- **Parcours** : formations et expériences (stages, jobs…) de la section « Parcours » et du CV.
+- **Parcours** : formations et expériences professionnelles (stages, emplois…) de la section
+  « Parcours » du site et du CV. Chaque élément porte un type : les « Formation » sont regroupées
+  sous **Formation**, les « Expérience professionnelle » sous **Expériences professionnelles**.
+  Un nouveau stage rejoint donc automatiquement les précédents, sans rien réorganiser.
+  L'ordre à l'intérieur d'un groupe se règle avec les flèches ↑ ↓ (le plus récent en haut).
 - **Profil** : photo, année d'étude (à changer à chaque rentrée), badge de disponibilité,
   textes de présentation, coordonnées, langues parlées, centres d'intérêt.
 - **CV & partage** : état du CV, aperçus FR/EN, QR code du portfolio (PNG ou SVG),
