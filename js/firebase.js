@@ -62,22 +62,13 @@ export function safeLink(url) {
   } catch { return ''; }
 }
 
-export const CATEGORIES = [
-  'Mécanique & CAO',
-  'Fabrication & Atelier',
-  'Électronique & Arduino',
-  'Programmation & Web',
-  'Intelligence Artificielle',
-  'Art & Astronomie',
-  'Autre'
-];
 
 /** Formate « 2026-03 » en « Mars 2026 ». */
-export function formatMonth(value) {
+export function formatMonth(value, lang = 'fr') {
   const m = /^(\d{4})-(\d{2})$/.exec(value || '');
   if (!m) return '';
   const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
-  const s = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 

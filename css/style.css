@@ -551,7 +551,7 @@ strong { font-weight: 700; }
 .pm-stage img { max-width: 100%; max-height: min(68vh, 680px); object-fit: contain; transition: opacity .35s var(--ease); }
 .pm-stage img.loading { opacity: 0; }
 .pm-stage.empty::after {
-  content: 'Aucune photo pour ce projet'; color: #9aa1aa; font-family: var(--font-mono); font-size: .8rem;
+  content: attr(data-empty); color: #9aa1aa; font-family: var(--font-mono); font-size: .8rem;
 }
 .pm-loader { position: absolute; width: 34px; height: 34px; border: 2px solid #ffffff2a; border-top-color: #e3955c; border-radius: 50%; animation: spin .8s linear infinite; }
 .pm-nav {
@@ -622,6 +622,42 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
 .to-top { text-decoration: none; transition: color .2s; }
 .to-top:hover { color: var(--dark-accent); }
 
+/* ---------- Langue ---------- */
+.lang-btn { font-family: var(--font-mono); font-size: .72rem; font-weight: 500; letter-spacing: .06em; }
+.nav.on-dark .lang-btn { color: #e4edf8; }
+/* Visiteur anglophone : textes masqués le temps de la traduction (quelques millisecondes) */
+.i18n-pending [data-i18n] { visibility: hidden; }
+
+/* ---------- Badge de disponibilité ---------- */
+.hero-tag[data-tone="orange"] .dot { background: #f0a066; box-shadow: none; animation: none; }
+.hero-tag[data-tone="grey"] .dot { background: #93a8c3; box-shadow: none; animation: none; }
+
+/* ---------- Boutons CV ---------- */
+.dl-icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.cv-download.busy { opacity: .7; pointer-events: none; }
+.cv-contact { margin-top: 1.4rem; }
+
+/* ---------- Parcours : formation et expériences ---------- */
+.path-grid { display: grid; grid-template-columns: 1fr; gap: 3rem 4rem; }
+.path-grid.two { grid-template-columns: 1fr 1fr; }
+.path-heading { font-family: var(--font-mono); font-size: .78rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.6rem; display: flex; align-items: center; gap: .7rem; }
+.path-heading::after { content: ''; flex: 1; height: 1px; background: var(--line-strong); }
+.path-grid:not(.two) .timeline { max-width: 760px; }
+
+/* ---------- Fenêtre projet : fiche technique et partage ---------- */
+.pm-specs { margin-top: 1.4rem; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+.pm-specs-title { font-family: var(--font-mono); font-size: .68rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; padding: .55rem .8rem; background: var(--bg-alt); border-bottom: 1px solid var(--line-strong); color: var(--accent); }
+.pm-specs dl { display: grid; grid-template-columns: minmax(7.5rem, auto) 1fr; }
+.pm-specs dt, .pm-specs dd { padding: .5rem .8rem; font-size: .85rem; border-bottom: 1px solid var(--line); }
+.pm-specs dt { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-right: 1px solid var(--line); align-self: stretch; display: flex; align-items: center; }
+.pm-specs dd { overflow-wrap: anywhere; }
+.pm-specs dl > :nth-last-child(-n+2) { border-bottom: 0; }
+.pm-share { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.pm-share-label { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: .3rem; }
+.share-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .75rem; border-radius: 100px; border: 1px solid var(--line-strong); font-size: .78rem; font-weight: 600; color: var(--ink); text-decoration: none; transition: border-color .2s, color .2s, background-color .2s; }
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+.share-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
 /* ---------- Économie d'énergie ---------- */
 /* Les sections hors écran mettent leurs animations en pause (classe posée par main.js) */
 .anim-off, .anim-off *, .anim-off *::before, .anim-off *::after { animation-play-state: paused !important; }
@@ -670,6 +706,7 @@ a.contact-link:hover { border-color: var(--accent); transform: translateX(6px); 
   .pm-info { overflow: visible; }
 }
 @media (max-width: 860px) {
+  .path-grid.two { grid-template-columns: 1fr; }
   .burger { display: inline-flex; }
   .nav-cta { display: none; }
   .nav-links {
