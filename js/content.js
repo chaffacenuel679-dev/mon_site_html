@@ -191,3 +191,20 @@ export function sanitizeSpecs(specs) {
   SPEC_FIELDS.forEach(f => { const v = str(specs?.[f.key], 300).trim(); if (v) out[f.key] = v; });
   return out;
 }
+
+/* ---------------- Personnalisation du CV (settings/cvOptions) ----------------
+   Le CV reprend tout le contenu du site automatiquement ; ces réglages permettent seulement
+   de masquer des éléments et d'ajouter des rubriques libres. Les nouveaux contenus restent ajoutés tout seuls. */
+export const cvKey = {
+  parcours: i => `p:${i.kind}:${i.title}`,
+  skillCard: c => `s:${c.title}`,
+  skillItem: (c, i) => `s:${c.title}:${i.name}`,
+  project: p => `j:${p.id}`
+};
+export function sanitizeCvOptions(raw) {
+  const hidden = Array.isArray(raw?.hidden) ? raw.hidden.map(k => str(k, 220)).filter(Boolean).slice(0, 400) : [];
+  const sections = (Array.isArray(raw?.sections) ? raw.sections : []).slice(0, 4)
+    .map(x => ({ title: str(x?.title, 60).trim(), titleEn: str(x?.titleEn, 60).trim(), text: str(x?.text, 1500), textEn: str(x?.textEn, 1500) }))
+    .filter(x => x.title && (x.text.trim() || x.textEn.trim()));
+  return { hidden, sections };
+}

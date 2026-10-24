@@ -1,7 +1,7 @@
 // Génération du CV PDF (français ou anglais) à partir des contenus du portfolio.
 // Utilisé uniquement par la page d'administration : le PDF produit est enregistré dans Firestore
 // (settings/cv-fr et settings/cv-en) puis téléchargé tel quel par les visiteurs du site.
-import { SITE_URL, pick, fillYear, splitList, categoryLabel, translateTerm, isFallback } from './content.js';
+import { SITE_URL, pick, fillYear, splitList, categoryLabel, translateTerm, isFallback, cvKey } from './content.js';
 import { skillText, levelLabel } from './skills.js';
 import { formatMonth } from './firebase.js';
 
@@ -19,8 +19,8 @@ const L = {
   en: {
     profile: 'Profile', education: 'Education', experience: 'Experience', projects: 'Projects',
     skills: 'Skills', languages: 'Languages', interests: 'Interests', contact: 'Contact',
-    portfolio: 'Portfolio', scan: 'Scan to see my projects', updated: 'Résumé updated on {d}',
-    file: 'Résumé of Cénuel CHAFFA'
+    portfolio: 'Portfolio', scan: 'Scan to see my projects', updated: 'CV updated on {d}',
+    file: 'CV of Cénuel CHAFFA'
   }
 };
 
@@ -32,9 +32,10 @@ function rich(text) {
 const plain = text => String(text || '').replace(/\*\*/g, '');
 
 /** Prépare toutes les données utiles au CV (sert aussi à détecter les changements). */
-export function cvData({ about, parcours, skills, projects, info }, lang) {
+export function cvData({ about, parcours, skills, projects, info, options }, lang) {
   const year = info?.gmpYear ?? 2;
-  const list = (projects || []).filter(p => p.published).slice(0, about.cvProjects);
+  const hidden = new Set(options?.hidden || []);
+  const list = (projects || []).filter(p => p.published && !hidden.has(cvKey.project(p))).slice(0, about.cvProjects);
   return {
     lang,
     name: 'Cénuel Oyéniran CHAFFA',
@@ -42,14 +43,18 @@ export function cvData({ about, parcours, skills, projects, info }, lang) {
     summary: fillYear(pick(about, 'cvSummary', lang), year, lang),
     email: about.email, phone: about.phone, linkedin: about.linkedin,
     location: pick(about, 'location', lang),
-    parcours: (parcours || []).map(i => ({
+    parcours: (parcours || []).filter(i => !hidden.has(cvKey.parcours(i))).map(i => ({
       kind: i.kind, period: pick(i, 'period', lang), title: pick(i, 'title', lang),
       place: pick(i, 'place', lang), description: pick(i, 'description', lang)
     })),
-    skills: (skills || []).map(c => ({
+    skills: (skills || []).filter(c => !hidden.has(cvKey.skillCard(c))).map(c => ({
       title: skillText(c, 'title', lang),
-      items: c.items.map(i => ({ name: skillText(i, 'name', lang), level: i.level ? levelLabel(i.level, lang) : '' }))
-    })),
+      items: c.items.filter(i => !hidden.has(cvKey.skillItem(c, i))).map(i => ({ name: skillText(i, 'name', lang), level: i.level ? levelLabel(i.level, lang) : '' }))
+    })).filter(c => c.items.length),
+    sections: (options?.sections || []).map(x => ({
+      title: pick(x, 'title', lang),
+      lines: String(pick(x, 'text', lang) || '').split('\n').map(l => l.trim()).filter(Boolean)
+    })).filter(x => x.title && x.lines.length),
     languages: (about.languages || []).map(l => ({ name: pick(l, 'name', lang), level: pick(l, 'level', lang) })),
     interests: splitList(pick(about, 'interests', lang)).map(s => (isFallback(about, 'interests', lang) ? translateTerm(s) : s)),
     projects: list.map(p => ({
@@ -167,7 +172,8 @@ function definition(d, photo) {
     ...(d.summary ? [{ stack: [heading(t.profile), { text: rich(d.summary), fontSize: 9.5, lineHeight: 1.3, color: INK }], unbreakable: true }] : []),
     ...section(t.experience, timeline(experience)),
     ...section(t.education, timeline(education)),
-    ...section(t.projects, projectItems)
+    ...section(t.projects, projectItems),
+    ...d.sections.flatMap(x => section(x.title, x.lines.map(line => ({ text: rich(line), fontSize: 9, color: MUTED, margin: [0, 0, 0, 3], lineHeight: 1.25 }))))
   ];
 
   const side = [
@@ -212,7 +218,7 @@ function definition(d, photo) {
   return {
     pageSize: 'A4',
     pageMargins: [40, 36, 40, 40],
-    info: { title: t.file, author: 'Cénuel CHAFFA', subject: d.title, keywords: 'CV, résumé, GMP, mécanique' },
+    info: { title: t.file, author: 'Cénuel CHAFFA', subject: d.title, keywords: 'CV, GMP, mécanique' },
     defaultStyle: { font: 'Manrope', fontSize: 9.5, color: INK },
     footer: (page, count) => ({
       columns: [
