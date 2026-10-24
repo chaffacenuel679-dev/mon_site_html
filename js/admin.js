@@ -4,7 +4,7 @@ import {
 } from './firebase.js';
 import { LEVELS, SKILL_ICONS, DEFAULT_SKILLS, sanitizeSkills, renderSkillCard } from './skills.js';
 import {
-  SITE_URL, CATEGORIES, YEAR_OPTIONS, AVAILABILITY, DEFAULT_ABOUT, sanitizeAbout,
+  SITE_URL, CATEGORIES, YEAR_OPTIONS, AVAILABILITY, DEFAULT_ABOUT, sanitizeAbout, sanitizeCvOptions, cvKey,
   DEFAULT_PARCOURS, sanitizeParcours, PARCOURS_KINDS, SPEC_FIELDS, sanitizeSpecs
 } from './content.js';
 import { cvData, cvHash, generateCv } from './cv.js';
@@ -83,8 +83,8 @@ async function start() {
     showState('state-app');
     loadMessages();
     // Une fois tout chargé, le CV est vérifié (et régénéré s'il n'est plus à jour)
-    Promise.allSettled([loadProjects(), loadProfile(), loadSkills(), loadInfo(), loadAbout(), loadParcours(), loadIntegrations()])
-      .then(() => { contentReady = true; scheduleCv(0); });
+    Promise.allSettled([loadProjects(), loadProfile(), loadSkills(), loadInfo(), loadAbout(), loadParcours(), removeOldIntegrations(), loadCvOptions()])
+      .then(() => { contentReady = true; renderCvOptions(); scheduleCv(0); });
   });
 }
 
@@ -995,7 +995,7 @@ parcoursForm.addEventListener('submit', async e => {
 /* =====================================================
    CV PDF (settings/cv-fr, settings/cv-en)
    ===================================================== */
-const CV_LAYOUT = 2;          // à incrémenter si la mise en page du CV change
+const CV_LAYOUT = 3;          // à incrémenter si la mise en page du CV change
 let contentReady = false;     // vrai quand toutes les données sont chargées
 let cvTimer = null, cvRunning = false, cvAgain = false;
 const cvCache = {};
@@ -1007,7 +1007,7 @@ function scheduleCv(delay = 1200) {
 }
 
 function cvSources() {
-  const src = { about, parcours: parcoursItems, skills: skillCards, projects, info };
+  const src = { about, parcours: parcoursItems, skills: skillCards, projects, info, options: cvOptions };
   return { fr: cvData(src, 'fr'), en: cvData(src, 'en') };
 }
 
@@ -1061,6 +1061,86 @@ async function refreshCv(force = false) {
   }
 }
 $('#cv-generate').addEventListener('click', () => refreshCv(true));
+
+/* ---------- Personnalisation du contenu du CV (settings/cvOptions) ---------- */
+let cvOptions = sanitizeCvOptions(null);
+const cvForm = $('#cv-custom-form');
+const cvSectionsBox = $('#cv-sections');
+
+async function loadCvOptions() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'cvOptions'));
+    cvOptions = sanitizeCvOptions(snap.exists() ? snap.data() : null);
+    fillCvSections();
+  } catch (err) { console.error(err); }
+}
+
+function cvCheck(key, label, { sub = false, tag = '' } = {}) {
+  const box = el('input', { type: 'checkbox', checked: !cvOptions.hidden.includes(key) });
+  box.dataset.key = key;
+  return el('label', { class: `cv-check ${sub ? 'sub' : ''}` }, [box, el('span', {}, [label, tag ? el('span', { class: 'tag', text: tag }) : null])]);
+}
+
+function renderCvOptions() {
+  const groups = [];
+  if (parcoursItems.length) groups.push(el('div', { class: 'cv-group' }, [
+    el('h3', { text: 'Parcours' }),
+    ...parcoursItems.map(i => cvCheck(cvKey.parcours(i), i.title, { tag: PARCOURS_KINDS[i.kind].fr }))
+  ]));
+  if (skillCards.length) groups.push(el('div', { class: 'cv-group' }, [
+    el('h3', { text: 'Compétences' }),
+    ...skillCards.flatMap(c => [cvCheck(cvKey.skillCard(c), c.title), ...c.items.map(i => cvCheck(cvKey.skillItem(c, i), i.name, { sub: true }))])
+  ]));
+  const published = projects.filter(p => p.published);
+  if (published.length) groups.push(el('div', { class: 'cv-group' }, [
+    el('h3', { text: `Projets publiés (maximum ${about.cvProjects} sur le CV — réglable dans Profil)` }),
+    ...published.map(p => cvCheck(cvKey.project(p), p.title || 'Sans titre'))
+  ]));
+  $('#cv-checks').replaceChildren(...groups);
+}
+
+function addCvSection(x = { title: '', titleEn: '', text: '', textEn: '' }) {
+  const field = (tag, name, value, label, extra = {}) => el(tag, { name, value, 'aria-label': label, placeholder: label, ...extra });
+  const row = el('div', { class: 'cv-section-row' }, [
+    el('div', { class: 'row-head' }, [el('strong', { text: 'Rubrique' }), (() => {
+      const del = el('button', { type: 'button', class: 'btn btn-ghost btn-small', text: 'Retirer' });
+      del.addEventListener('click', () => row.remove());
+      return del;
+    })()]),
+    field('input', 'title', x.title, 'Titre (ex. Certifications)', { maxLength: 60 }),
+    field('textarea', 'text', x.text, 'Contenu — une ligne par point', { rows: 3, maxLength: 1500 }),
+    field('input', 'titleEn', x.titleEn, 'Title in English (e.g. Certifications)', { maxLength: 60 }),
+    field('textarea', 'textEn', x.textEn, 'Content in English — one line per item', { rows: 3, maxLength: 1500 })
+  ]);
+  cvSectionsBox.append(row);
+  return row;
+}
+$('#add-cv-section').addEventListener('click', () => $('input', addCvSection()).focus());
+
+function fillCvSections() {
+  cvSectionsBox.replaceChildren();
+  cvOptions.sections.forEach(addCvSection);
+}
+
+cvForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const hidden = $$('#cv-checks input[type=checkbox]').filter(b => !b.checked).map(b => b.dataset.key);
+  // Les éléments masqués qui n'existent plus sont oubliés ; ceux d'une carte masquée sont déjà couverts par la carte
+  const sections = $$('.cv-section-row', cvSectionsBox).map(r => Object.fromEntries(['title', 'titleEn', 'text', 'textEn'].map(k => [k, $(`[name=${k}]`, r).value])));
+  const next = sanitizeCvOptions({ hidden, sections });
+  const btn = $('#cv-custom-save');
+  btn.disabled = true;
+  try {
+    await fs.setDoc(fs.doc(db, 'settings', 'cvOptions'), { ...next, updatedAt: fs.serverTimestamp() });
+    cvOptions = next;
+    $('#cv-custom-status').textContent = 'Enregistré. Le CV se met à jour…';
+    toast('Contenu du CV enregistré.');
+    scheduleCv(0);
+  } catch (err) { console.error(err); toast(explain(err), 'err'); }
+  finally { btn.disabled = false; }
+});
+$('#tab-cv').addEventListener('click', () => { renderCvOptions(); });
+
 
 $$('[data-cv-preview]').forEach(b => b.addEventListener('click', async () => {
   const lang = b.dataset.cvPreview;
@@ -1125,36 +1205,9 @@ $('#qr-png').addEventListener('click', () => {
 });
 renderQr();
 
-/* =====================================================
-   SERVICES GRATUITS (settings/integrations)
-   ===================================================== */
-const intForm = $('#integrations-form');
-async function loadIntegrations() {
-  try {
-    const snap = await fs.getDoc(fs.doc(db, 'settings', 'integrations'));
-    const d = snap.exists() ? snap.data() : {};
-    intForm.elements.goatcounter.value = d.goatcounter || '';
-    intForm.elements.publicKey.value = d.emailjs?.publicKey || '';
-    intForm.elements.serviceId.value = d.emailjs?.serviceId || '';
-    intForm.elements.templateId.value = d.emailjs?.templateId || '';
-  } catch (err) { console.error(err); }
+/* Nettoyage : les services GoatCounter / EmailJS ont été retirés, on supprime leurs réglages enregistrés */
+async function removeOldIntegrations() {
+  try { await fs.deleteDoc(fs.doc(db, 'settings', 'integrations')); } catch (err) { console.warn(err); }
 }
-intForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const v = k => intForm.elements[k].value.trim();
-  // Accepte « cenuel », « cenuel.goatcounter.com » ou l'adresse complète
-  const goatcounter = v('goatcounter').toLowerCase().replace(/^https?:\/\//, '').replace(/\.goatcounter\.com.*$/, '');
-  if (goatcounter && !/^[a-z0-9-]{2,60}$/.test(goatcounter)) { toast('Code GoatCounter invalide (lettres, chiffres et tirets).', 'err'); return; }
-  const emailjs = { publicKey: v('publicKey'), serviceId: v('serviceId'), templateId: v('templateId') };
-  if (Object.values(emailjs).some(x => x && !/^[\w-]{3,80}$/.test(x))) { toast('Identifiant EmailJS invalide.', 'err'); return; }
-  const filled = Object.values(emailjs).filter(Boolean).length;
-  if (filled && filled < 3) { toast('Remplis les trois champs EmailJS (ou aucun).', 'err'); return; }
-  try {
-    await fs.setDoc(fs.doc(db, 'settings', 'integrations'), { goatcounter, emailjs, updatedAt: fs.serverTimestamp() });
-    intForm.elements.goatcounter.value = goatcounter;
-    $('#integrations-status').textContent = 'Enregistré. Actif sur le site dès le prochain chargement.';
-    toast('Services enregistrés.');
-  } catch (err) { toast(explain(err), 'err'); }
-});
 
 start();

@@ -258,7 +258,7 @@
           <div class="field"><label for="a-heroEn">Hero sentence</label><textarea id="a-heroEn" name="heroEn" rows="3" maxlength="400"></textarea></div>
           <div class="field"><label for="a-aboutEn">About text <span class="hint">{year} = « second-year »</span></label><textarea id="a-aboutEn" name="aboutEn" rows="9" maxlength="3000"></textarea></div>
           <div class="field"><label for="a-tagsEn">Tags</label><input id="a-tagsEn" name="tagsEn" type="text" maxlength="400" /></div>
-          <div class="field"><label for="a-cvSummaryEn">Résumé summary</label><textarea id="a-cvSummaryEn" name="cvSummaryEn" rows="4" maxlength="700"></textarea></div>
+          <div class="field"><label for="a-cvSummaryEn">CV summary</label><textarea id="a-cvSummaryEn" name="cvSummaryEn" rows="4" maxlength="700"></textarea></div>
           <div class="form-row">
             <div class="field"><label for="a-locationEn">Location</label><input id="a-locationEn" name="locationEn" type="text" maxlength="120" /></div>
             <div class="field"><label for="a-interestsEn">Interests</label><input id="a-interestsEn" name="interestsEn" type="text" maxlength="300" /></div>
@@ -294,6 +294,25 @@
         </div>
       </div>
 
+      <form class="cv-custom" id="cv-custom-form" novalidate>
+        <h2 class="sub-title">Personnaliser le contenu du CV</h2>
+        <p class="muted">Le CV reprend automatiquement tout le contenu du site, y compris ce que tu ajouteras plus tard. Ici, tu choisis seulement ce que tu <strong>retires</strong> du CV (sans le retirer du site) et ce que tu <strong>ajoutes</strong> en plus. Le résumé, le titre, les langues et la photo se règlent dans l'onglet Profil.</p>
+        <fieldset class="fieldset">
+          <legend>Éléments affichés sur le CV</legend>
+          <div class="cv-checks" id="cv-checks"></div>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend>Rubriques à ajouter <span class="muted">(visibles uniquement sur le CV)</span></legend>
+          <p class="muted small">Exemples : Certifications, Références, Activités associatives, Permis. Une ligne = un point. <code>**mot**</code> met en gras.</p>
+          <div class="cv-sections" id="cv-sections"></div>
+          <button class="btn btn-ghost btn-small" type="button" id="add-cv-section">+ Ajouter une rubrique</button>
+        </fieldset>
+        <div class="form-actions">
+          <p class="muted small" id="cv-custom-status" role="status"></p>
+          <button class="btn" type="submit" id="cv-custom-save">Enregistrer et mettre à jour le CV</button>
+        </div>
+      </form>
+
       <div class="settings-grid">
         <div class="year-box qr-box">
           <h2 class="sub-title">QR code du portfolio</h2>
@@ -310,28 +329,6 @@
             </div>
           </div>
         </div>
-
-        <form class="year-box" id="integrations-form" novalidate>
-          <h2 class="sub-title">Services gratuits (facultatif)</h2>
-          <div class="field">
-            <label for="i-goatcounter">Statistiques de visites — code GoatCounter</label>
-            <input id="i-goatcounter" name="goatcounter" type="text" maxlength="60" placeholder="ex. cenuel (pour cenuel.goatcounter.com)" />
-            <p class="muted small">Compte gratuit sur <a href="https://www.goatcounter.com/signup" target="_blank" rel="noopener">goatcounter.com</a> (sans cookies, respecte la vie privée).</p>
-          </div>
-          <fieldset class="fieldset">
-            <legend>Alerte email à chaque message — EmailJS</legend>
-            <div class="field"><label for="i-ej-public">Public Key</label><input id="i-ej-public" name="publicKey" type="text" maxlength="80" /></div>
-            <div class="form-row">
-              <div class="field"><label for="i-ej-service">Service ID</label><input id="i-ej-service" name="serviceId" type="text" maxlength="80" /></div>
-              <div class="field"><label for="i-ej-template">Template ID</label><input id="i-ej-template" name="templateId" type="text" maxlength="80" /></div>
-            </div>
-            <p class="muted small">Compte gratuit sur <a href="https://www.emailjs.com/" target="_blank" rel="noopener">emailjs.com</a> (200 emails/mois). Dans ton modèle d'email, utilise <code>{{from_name}}</code>, <code>{{from_email}}</code>, <code>{{subject}}</code> et <code>{{message}}</code>. Les messages restent aussi enregistrés dans l'onglet Messages.</p>
-          </fieldset>
-          <div class="form-actions">
-            <p class="muted small" id="integrations-status" role="status"></p>
-            <button class="btn" type="submit">Enregistrer</button>
-          </div>
-        </form>
       </div>
     </div>
   </section>

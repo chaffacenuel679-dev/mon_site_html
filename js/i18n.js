@@ -47,7 +47,7 @@ const UI = {
     'form.wait': 'Message already sent. Please wait a minute before sending another one.',
     'form.sending': 'Sending…', 'form.failed': 'Sending failed. Opening your email app…',
     'mail.subject': 'Contact from your portfolio',
-    'cv.preparing': 'Preparing…', 'cv.error': 'The résumé is temporarily unavailable. Please try again later.', 'cv.file': 'Resume-Cenuel-CHAFFA.pdf',
+    'cv.preparing': 'Preparing…', 'cv.error': 'The CV is temporarily unavailable. Please try again later.', 'cv.file': 'CV-Cenuel-CHAFFA-EN.pdf',
     'specs': 'Technical sheet', 'share': 'Share', 'share.copy': 'Copy link', 'share.copied': 'Link copied!',
     'share.text': 'Check out this project by Cénuel CHAFFA: {title}'
   }
@@ -68,7 +68,7 @@ const STATIC_EN = {
   'a.prev': 'Previous photo', 'a.next': 'Next photo', 'a.logo': 'Back to top',
   'hero.hello': 'Hello, I’m', 'hero.role': 'I design',
   'hero.roleSr': 'I design mechanical parts, 3D models, Arduino builds, websites and AI solutions.',
-  'cta.projects': 'See my projects', 'cta.contact': 'Contact me', 'cta.cv': 'My résumé', 'cta.cvLong': 'Download my résumé (PDF)',
+  'cta.projects': 'See my projects', 'cta.contact': 'Contact me', 'cta.cv': 'My CV', 'cta.cvLong': 'Download my CV (PDF)',
   'stat.program': 'Program', 'stat.diploma': 'Diploma', 'stat.design': 'Design', 'stat.bac': 'Bac D', 'stat.cad': '2D/3D CAD', 'stat.elec': 'Electronics',
   'fig.title': 'SPUR GEAR m 14 · Z 20/12 · a 224', 'fig.drawn': 'DRAWN BY C. CHAFFA', 'fig.scale': 'SCALE 1:2',
   'fig.caption': 'Fig. 01 — Spur gear, module 14, ratio 20/12',
