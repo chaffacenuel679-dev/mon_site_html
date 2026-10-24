@@ -958,7 +958,7 @@ function openParcoursEditor(index = null, kind = 'education') {
   parcoursIndex = index;
   const item = index === null ? { kind } : parcoursItems[index];
   $('#parcours-editor-title').textContent = index === null
-    ? (kind === 'experience' ? 'Nouvelle expérience' : 'Nouvelle formation')
+    ? (kind === 'experience' ? 'Nouvelle expérience professionnelle' : 'Nouvelle formation')
     : 'Modifier l\'élément';
   PARCOURS_FIELDS.forEach(k => { parcoursForm.elements[k].value = item[k] || (k === 'kind' ? 'education' : ''); });
   $('.en-box', parcoursForm).open = Boolean(item.titleEn);
@@ -995,7 +995,7 @@ parcoursForm.addEventListener('submit', async e => {
 /* =====================================================
    CV PDF (settings/cv-fr, settings/cv-en)
    ===================================================== */
-const CV_LAYOUT = 3;          // à incrémenter si la mise en page du CV change
+const CV_LAYOUT = 4;          // à incrémenter si la mise en page du CV change
 let contentReady = false;     // vrai quand toutes les données sont chargées
 let cvTimer = null, cvRunning = false, cvAgain = false;
 const cvCache = {};

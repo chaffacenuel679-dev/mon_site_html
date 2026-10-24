@@ -79,7 +79,7 @@ const STATIC_EN = {
   'about.photoAlt': 'Cénuel CHAFFA in his INSTI Lokossa workshop coat', 'about.tagsLabel': 'Interests and skills',
   'path.eyebrow': '02 — Background', 'path.title': 'My background',
   'path.intro': 'Studies focused on industrial engineering and production technologies, alongside hands-on experience.',
-  'path.education': 'Education', 'path.experience': 'Experience',
+  'path.education': 'Education', 'path.experience': 'Professional experience',
   'skills.eyebrow': '03 — What I can do', 'skills.title': 'Skills',
   'skills.intro': 'Solid technical foundations, fuelled by constant curiosity for new technologies.',
   'projects.eyebrow': '04 — Work', 'projects.title': 'Projects &amp; achievements',

@@ -140,7 +140,7 @@ export const splitList = s => String(s || '').split(',').map(t => t.trim()).filt
 export const whatsappLink = phone => `https://wa.me/${String(phone || '').replace(/\D/g, '')}`;
 
 /* ---------------- Parcours : formations et expériences ---------------- */
-export const PARCOURS_KINDS = { education: { fr: 'Formation', en: 'Education' }, experience: { fr: 'Expérience', en: 'Experience' } };
+export const PARCOURS_KINDS = { education: { fr: 'Formation', en: 'Education' }, experience: { fr: 'Expérience pro.', en: 'Professional experience' } };
 
 export const DEFAULT_PARCOURS = [
   {

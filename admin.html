@@ -114,11 +114,11 @@
       <div class="panel-head">
         <div>
           <h1 class="panel-title">Parcours</h1>
-          <p class="muted">Formations et expériences (stages, jobs, projets associatifs…) affichées dans la section « Parcours » du site et sur le CV, dans cet ordre.</p>
+          <p class="muted">Formations et expériences professionnelles (stages, emplois…) affichées dans la section « Parcours » du site et sur le CV, dans cet ordre. Chaque stage que tu ajoutes rejoint automatiquement les autres sous « Expériences professionnelles ».</p>
         </div>
         <div class="head-actions">
           <button class="btn btn-ghost" type="button" data-new-parcours="education">+ Formation</button>
-          <button class="btn" type="button" data-new-parcours="experience">+ Expérience</button>
+          <button class="btn" type="button" data-new-parcours="experience">+ Expérience professionnelle</button>
         </div>
       </div>
       <p class="notice" id="parcours-default-note" hidden>Ce sont les éléments actuellement affichés sur ton site. Dès que tu en modifies un, tout le parcours sera enregistré dans Firebase.</p>
@@ -482,7 +482,7 @@
           <label for="p-kind">Type</label>
           <select id="p-kind" name="kind">
             <option value="education">Formation</option>
-            <option value="experience">Expérience (stage, job…)</option>
+            <option value="experience">Expérience professionnelle (stage, emploi…)</option>
           </select>
         </div>
         <div class="field">
