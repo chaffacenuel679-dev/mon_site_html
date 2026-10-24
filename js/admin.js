@@ -995,7 +995,7 @@ parcoursForm.addEventListener('submit', async e => {
 /* =====================================================
    CV PDF (settings/cv-fr, settings/cv-en)
    ===================================================== */
-const CV_LAYOUT = 1;          // à incrémenter si la mise en page du CV change
+const CV_LAYOUT = 2;          // à incrémenter si la mise en page du CV change
 let contentReady = false;     // vrai quand toutes les données sont chargées
 let cvTimer = null, cvRunning = false, cvAgain = false;
 const cvCache = {};
