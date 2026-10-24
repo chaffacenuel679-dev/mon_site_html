@@ -83,7 +83,7 @@ async function start() {
     showState('state-app');
     loadMessages();
     // Une fois tout chargé, le CV est vérifié (et régénéré s'il n'est plus à jour)
-    Promise.allSettled([loadProjects(), loadProfile(), loadSkills(), loadInfo(), loadAbout(), loadParcours(), loadIntegrations(), loadCvOptions()])
+    Promise.allSettled([loadProjects(), loadProfile(), loadSkills(), loadInfo(), loadAbout(), loadParcours(), removeOldIntegrations(), loadCvOptions()])
       .then(() => { contentReady = true; renderCvOptions(); scheduleCv(0); });
   });
 }
@@ -1205,36 +1205,9 @@ $('#qr-png').addEventListener('click', () => {
 });
 renderQr();
 
-/* =====================================================
-   SERVICES GRATUITS (settings/integrations)
-   ===================================================== */
-const intForm = $('#integrations-form');
-async function loadIntegrations() {
-  try {
-    const snap = await fs.getDoc(fs.doc(db, 'settings', 'integrations'));
-    const d = snap.exists() ? snap.data() : {};
-    intForm.elements.goatcounter.value = d.goatcounter || '';
-    intForm.elements.publicKey.value = d.emailjs?.publicKey || '';
-    intForm.elements.serviceId.value = d.emailjs?.serviceId || '';
-    intForm.elements.templateId.value = d.emailjs?.templateId || '';
-  } catch (err) { console.error(err); }
+/* Nettoyage : les services GoatCounter / EmailJS ont été retirés, on supprime leurs réglages enregistrés */
+async function removeOldIntegrations() {
+  try { await fs.deleteDoc(fs.doc(db, 'settings', 'integrations')); } catch (err) { console.warn(err); }
 }
-intForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const v = k => intForm.elements[k].value.trim();
-  // Accepte « cenuel », « cenuel.goatcounter.com » ou l'adresse complète
-  const goatcounter = v('goatcounter').toLowerCase().replace(/^https?:\/\//, '').replace(/\.goatcounter\.com.*$/, '');
-  if (goatcounter && !/^[a-z0-9-]{2,60}$/.test(goatcounter)) { toast('Code GoatCounter invalide (lettres, chiffres et tirets).', 'err'); return; }
-  const emailjs = { publicKey: v('publicKey'), serviceId: v('serviceId'), templateId: v('templateId') };
-  if (Object.values(emailjs).some(x => x && !/^[\w-]{3,80}$/.test(x))) { toast('Identifiant EmailJS invalide.', 'err'); return; }
-  const filled = Object.values(emailjs).filter(Boolean).length;
-  if (filled && filled < 3) { toast('Remplis les trois champs EmailJS (ou aucun).', 'err'); return; }
-  try {
-    await fs.setDoc(fs.doc(db, 'settings', 'integrations'), { goatcounter, emailjs, updatedAt: fs.serverTimestamp() });
-    intForm.elements.goatcounter.value = goatcounter;
-    $('#integrations-status').textContent = 'Enregistré. Actif sur le site dès le prochain chargement.';
-    toast('Services enregistrés.');
-  } catch (err) { toast(explain(err), 'err'); }
-});
 
 start();

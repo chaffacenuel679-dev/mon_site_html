@@ -35,8 +35,7 @@ const state = {
   skills: null,                // cartes de compétences (null = valeurs par défaut)
   about: sanitizeAbout(null),  // textes de présentation et coordonnées
   parcours: null,              // formations et expériences (null = valeurs par défaut)
-  info: { gmpYear: 2, availability: 'open', cv: null },
-  integrations: {}
+  info: { gmpYear: 2, availability: 'open', cv: null }
 };
 
 $('#year').textContent = new Date().getFullYear();
@@ -403,7 +402,7 @@ function renderProjects() {
 }
 
 /* ---------------- Chargement des contenus Firebase ---------------- */
-const SETTINGS_DOCS = ['profile', 'skills', 'info', 'about', 'parcours', 'integrations'];
+const SETTINGS_DOCS = ['profile', 'skills', 'info', 'about', 'parcours'];
 
 async function loadRemoteContent() {
   const safety = setTimeout(() => root.classList.remove('remote-loading'), 4000);
@@ -429,7 +428,6 @@ async function loadRemoteContent() {
     }
     if (settings.about) state.about = sanitizeAbout(settings.about);
     if (settings.parcours && Array.isArray(settings.parcours.items)) state.parcours = sanitizeParcours(settings.parcours.items);
-    if (settings.integrations) state.integrations = settings.integrations;
 
     const photo = settings.profile ? safeImage(settings.profile.photo) : '';
     if (photo) {
@@ -442,7 +440,6 @@ async function loadRemoteContent() {
       state.projects.forEach(p => projectsById.set(p.id, p));
     }
     renderAll();
-    loadIntegrations();
     openFromHash();
   } catch (err) {
     console.warn('Contenu Firebase indisponible, affichage des contenus par défaut.', err);
@@ -704,30 +701,6 @@ async function downloadCv(btn) {
 }
 $$('.cv-download').forEach(b => b.addEventListener('click', () => downloadCv(b)));
 
-/* ---------------- Intégrations facultatives (réglées dans l'administration) ---------------- */
-function loadIntegrations() {
-  const code = String(state.integrations.goatcounter || '').trim().toLowerCase();
-  if (/^[a-z0-9-]{2,60}$/.test(code) && !$('script[data-goatcounter]')) {
-    const s = document.createElement('script');
-    s.async = true;
-    s.dataset.goatcounter = `https://${code}.goatcounter.com/count`;
-    s.src = 'https://gc.zgo.at/count.js';
-    document.head.append(s);
-  }
-}
-function notifyByEmail(data) {
-  const cfg = state.integrations.emailjs || {};
-  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) return;
-  fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      service_id: cfg.serviceId, template_id: cfg.templateId, user_id: cfg.publicKey,
-      template_params: { from_name: data.name, from_email: data.email, reply_to: data.email, subject: data.subject || t('mail.subject'), message: data.message }
-    })
-  }).catch(() => { /* la notification est un bonus : le message est déjà enregistré */ });
-}
-
 /* ---------------- Formulaire de contact ---------------- */
 const form = $('#contact-form');
 const statusEl = $('#cf-status');
@@ -780,7 +753,6 @@ form.addEventListener('submit', async e => {
     const { db, fs } = await getDb();
     await fs.addDoc(fs.collection(db, 'messages'), { ...data, createdAt: fs.serverTimestamp(), read: false });
     try { localStorage.setItem('lastMessageAt', String(Date.now())); } catch (e) { /* ignoré */ }
-    notifyByEmail(data);
     form.reset();
     setStatus(t('form.sent'), 'ok');
   } catch (err) {

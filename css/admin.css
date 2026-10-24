@@ -157,9 +157,9 @@ code { font-family: var(--font-mono); font-size: .85em; background: var(--bg-alt
 .head-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 2.5rem; }
 .settings-grid .year-box { max-width: none; }
-.about-form, #integrations-form { display: grid; gap: 1rem; align-content: start; }
+.about-form { display: grid; gap: 1rem; align-content: start; }
 .about-form { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); max-width: 820px; }
-.about-form .field input, .about-form .field textarea, #integrations-form .field input, .about-form select { background: var(--bg); }
+.about-form .field input, .about-form .field textarea, .about-form select { background: var(--bg); }
 .lang-row input { width: 100%; font: inherit; font-size: .9rem; padding: .6rem .7rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
 .check-field { align-self: end; padding-bottom: .7rem; }
 .form-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }

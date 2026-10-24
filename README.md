@@ -105,7 +105,7 @@ dans Firebase pour que tu puisses leur ajouter des photos.
 - **Profil** : photo, année d'étude (à changer à chaque rentrée), badge de disponibilité,
   textes de présentation, coordonnées, langues parlées, centres d'intérêt.
 - **CV & partage** : état du CV, aperçus FR/EN, QR code du portfolio (PNG ou SVG),
-  statistiques de visites (GoatCounter) et alerte email à chaque message (EmailJS).
+  personnalisation du contenu du CV.
 
 ## Version anglaise
 - Le bouton **EN / FR** en haut du site change la langue ; le choix est mémorisé.
@@ -129,15 +129,6 @@ dans Firebase pour que tu puisses leur ajouter des photos.
    (une formation, une compétence, un projet…) sans le retirer du site, et ajoute des rubriques
    réservées au CV (Certifications, Références…). Tout ce que tu ajoutes plus tard au site
    apparaît quand même automatiquement sur le CV.
-
-## Services gratuits facultatifs
-- **Statistiques de visites** : crée un compte sur goatcounter.com (gratuit, sans cookies),
-  puis colle ton code (ex. `cenuel`) dans **CV & partage**. Tes statistiques sont sur
-  `https://cenuel.goatcounter.com`.
-- **Alerte email à chaque message** : crée un compte sur emailjs.com, ajoute un service
-  (ton Gmail) et un modèle d'email utilisant `{{from_name}}`, `{{from_email}}`, `{{subject}}`,
-  `{{message}}`, puis colle la *Public Key*, le *Service ID* et le *Template ID* dans **CV & partage**.
-  Ces identifiants sont publics par nature (comme la configuration Firebase).
 
 ## Choix techniques (et pourquoi)
 - **Pourquoi les photos sont dans Firestore et pas dans Firebase Storage ?**
