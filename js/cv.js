@@ -152,23 +152,23 @@ function definition(d, photo) {
   const education = d.parcours.filter(i => i.kind === 'education');
   const experience = d.parcours.filter(i => i.kind === 'experience');
 
+  const projectItems = d.projects.map(p => ({
+    stack: [
+      { text: [{ text: p.title, bold: true, color: INK }, { text: [p.category, p.date].filter(Boolean).length ? `  ·  ${[p.category, p.date].filter(Boolean).join(' · ')}` : '', color: MUTED, fontSize: 8.5 }], fontSize: 10 },
+      p.summary ? { text: plain(p.summary), fontSize: 9, color: MUTED, margin: [0, 2, 0, 0], lineHeight: 1.25 } : null
+    ].filter(Boolean),
+    margin: [0, 0, 0, 7],
+    unbreakable: true
+  }));
+  // Un titre de section est toujours collé à son premier élément (jamais seul en bas de page)
+  const section = (title, items) => (items.length ? [{ stack: [heading(title), items[0]], unbreakable: true }, ...items.slice(1)] : []);
+
   const main = [
-    d.summary && heading(t.profile),
-    d.summary && { text: rich(d.summary), fontSize: 9.5, lineHeight: 1.3, color: INK },
-    experience.length && heading(t.experience),
-    ...(experience.length ? timeline(experience) : []),
-    education.length && heading(t.education),
-    ...timeline(education),
-    d.projects.length && heading(t.projects),
-    ...d.projects.map(p => ({
-      stack: [
-        { text: [{ text: p.title, bold: true, color: INK }, { text: [p.category, p.date].filter(Boolean).length ? `  ·  ${[p.category, p.date].filter(Boolean).join(' · ')}` : '', color: MUTED, fontSize: 8.5 }], fontSize: 10 },
-        p.summary ? { text: plain(p.summary), fontSize: 9, color: MUTED, margin: [0, 2, 0, 0], lineHeight: 1.25 } : null
-      ].filter(Boolean),
-      margin: [0, 0, 0, 7],
-      unbreakable: true
-    }))
-  ].filter(Boolean);
+    ...(d.summary ? [{ stack: [heading(t.profile), { text: rich(d.summary), fontSize: 9.5, lineHeight: 1.3, color: INK }], unbreakable: true }] : []),
+    ...section(t.experience, timeline(experience)),
+    ...section(t.education, timeline(education)),
+    ...section(t.projects, projectItems)
+  ];
 
   const side = [
     sideHeading(t.skills),
