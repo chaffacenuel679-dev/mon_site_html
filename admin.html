@@ -81,9 +81,11 @@
   <section id="state-app" hidden>
     <div class="tabs" role="tablist" aria-label="Sections de l'administration">
       <button role="tab" type="button" class="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="true">Projets <span class="count" id="count-projects"></span></button>
-      <button role="tab" type="button" class="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages <span class="count badge" id="count-messages" hidden></span></button>
+      <button role="tab" type="button" class="tab" id="tab-parcours" aria-controls="panel-parcours" aria-selected="false" tabindex="-1">Parcours</button>
       <button role="tab" type="button" class="tab" id="tab-skills" aria-controls="panel-skills" aria-selected="false" tabindex="-1">Compétences</button>
       <button role="tab" type="button" class="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="false" tabindex="-1">Profil</button>
+      <button role="tab" type="button" class="tab" id="tab-cv" aria-controls="panel-cv" aria-selected="false" tabindex="-1">CV &amp; partage</button>
+      <button role="tab" type="button" class="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages <span class="count badge" id="count-messages" hidden></span></button>
     </div>
 
     <!-- Projets -->
@@ -105,6 +107,22 @@
         <button class="btn btn-small" type="button" id="covers-fix">Alléger maintenant</button>
       </p>
       <div class="admin-grid" id="admin-projects"></div>
+    </div>
+
+    <!-- Parcours -->
+    <div class="panel" id="panel-parcours" role="tabpanel" aria-labelledby="tab-parcours" hidden>
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Parcours</h1>
+          <p class="muted">Formations et expériences (stages, jobs, projets associatifs…) affichées dans la section « Parcours » du site et sur le CV, dans cet ordre.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost" type="button" data-new-parcours="education">+ Formation</button>
+          <button class="btn" type="button" data-new-parcours="experience">+ Expérience</button>
+        </div>
+      </div>
+      <p class="notice" id="parcours-default-note" hidden>Ce sont les éléments actuellement affichés sur ton site. Dès que tu en modifies un, tout le parcours sera enregistré dans Firebase.</p>
+      <div class="parcours-admin" id="parcours-admin"></div>
     </div>
 
     <!-- Messages -->
@@ -138,12 +156,13 @@
       <div class="panel-head">
         <div>
           <h1 class="panel-title">Profil</h1>
-          <p class="muted">Affichée dans la section « À propos ». Format portrait conseillé (4:5), fond neutre, bonne lumière.</p>
+          <p class="muted">Photo, année d'étude, disponibilité et tous les textes de présentation du site et du CV.</p>
         </div>
       </div>
       <div class="profile-row">
         <img id="profile-preview" class="profile-preview" src="assets/cenuel-chaffa.webp" alt="Photo de profil actuelle" />
         <div class="profile-actions">
+          <p class="muted small">Affichée dans « À propos ». Format portrait conseillé (4:5), fond neutre, bonne lumière.</p>
           <label class="btn" for="profile-file">Choisir une photo…</label>
           <input id="profile-file" type="file" accept="image/*" class="visually-hidden" />
           <button class="btn btn-ghost" type="button" id="profile-reset">Rétablir la photo par défaut</button>
@@ -151,14 +170,168 @@
         </div>
       </div>
 
-      <div class="year-box">
-        <h2 class="sub-title">Année d'étude</h2>
-        <p class="muted">Affichée en haut du site (« Formation ») et dans « À propos ». À changer à chaque rentrée.</p>
-        <div class="year-row">
-          <select id="year-select" aria-label="Année d'étude en GMP"></select>
-          <button class="btn" type="button" id="year-save">Enregistrer</button>
+      <div class="settings-grid">
+        <div class="year-box">
+          <h2 class="sub-title">Année d'étude</h2>
+          <p class="muted">Affichée en haut du site, dans « À propos » et sur le CV. À changer à chaque rentrée.</p>
+          <div class="year-row">
+            <select id="year-select" aria-label="Année d'étude en GMP"></select>
+            <button class="btn" type="button" id="year-save">Enregistrer</button>
+          </div>
+          <p class="muted small" id="year-status"></p>
         </div>
-        <p class="muted small" id="year-status"></p>
+        <div class="year-box">
+          <h2 class="sub-title">Disponibilité</h2>
+          <p class="muted">Le petit badge vert en haut du site.</p>
+          <div class="year-row">
+            <select id="availability-select" aria-label="Disponibilité"></select>
+            <button class="btn" type="button" id="availability-save">Enregistrer</button>
+          </div>
+          <p class="muted small" id="availability-status"></p>
+        </div>
+      </div>
+
+      <form class="about-form" id="about-form" novalidate>
+        <h2 class="sub-title">Textes de présentation</h2>
+        <p class="muted small">Astuces : <code>**mot**</code> met un mot en <strong>gras</strong> · une ligne vide crée un nouveau paragraphe · <code>{annee}</code> est remplacé par ton année d'étude (« deuxième année »).</p>
+        <div class="field">
+          <label for="a-title">Titre (sous ton nom sur le CV)</label>
+          <input id="a-title" name="title" type="text" maxlength="120" />
+        </div>
+        <div class="field">
+          <label for="a-hero">Phrase d'accroche (haut du site)</label>
+          <textarea id="a-hero" name="hero" rows="3" maxlength="400"></textarea>
+        </div>
+        <div class="field">
+          <label for="a-about">Texte « À propos »</label>
+          <textarea id="a-about" name="about" rows="9" maxlength="3000"></textarea>
+        </div>
+        <div class="field">
+          <label for="a-tags">Étiquettes sous « À propos » (séparées par des virgules)</label>
+          <input id="a-tags" name="tags" type="text" maxlength="400" />
+        </div>
+        <div class="field">
+          <label for="a-cvSummary">Résumé du CV (3 à 4 lignes)</label>
+          <textarea id="a-cvSummary" name="cvSummary" rows="4" maxlength="700"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="a-email">Email</label>
+            <input id="a-email" name="email" type="email" maxlength="200" />
+          </div>
+          <div class="field">
+            <label for="a-phone">Téléphone / WhatsApp</label>
+            <input id="a-phone" name="phone" type="tel" maxlength="40" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="a-linkedin">LinkedIn</label>
+            <input id="a-linkedin" name="linkedin" type="url" maxlength="300" placeholder="https://linkedin.com/in/…" />
+          </div>
+          <div class="field">
+            <label for="a-location">Localisation</label>
+            <input id="a-location" name="location" type="text" maxlength="120" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="a-interests">Centres d'intérêt (CV, séparés par des virgules)</label>
+          <input id="a-interests" name="interests" type="text" maxlength="300" />
+        </div>
+        <div>
+          <p class="photos-label">Langues parlées (CV)</p>
+          <ul class="skill-rows lang-rows" id="lang-rows"></ul>
+          <button class="btn btn-ghost btn-small" type="button" id="add-lang-row">+ Ajouter une langue</button>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="a-cvProjects">Nombre de projets sur le CV</label>
+            <input id="a-cvProjects" name="cvProjects" type="number" min="0" max="8" step="1" />
+          </div>
+          <div class="field check-field">
+            <label class="switch"><input type="checkbox" name="cvPhoto" id="a-cvPhoto" /><span></span> Mettre ma photo sur le CV</label>
+          </div>
+        </div>
+        <details class="en-box">
+          <summary>Version anglaise <span class="muted">(facultatif — sinon le texte par défaut ou le français est utilisé)</span></summary>
+          <div class="field"><label for="a-titleEn">Title</label><input id="a-titleEn" name="titleEn" type="text" maxlength="120" /></div>
+          <div class="field"><label for="a-heroEn">Hero sentence</label><textarea id="a-heroEn" name="heroEn" rows="3" maxlength="400"></textarea></div>
+          <div class="field"><label for="a-aboutEn">About text <span class="hint">{year} = « second-year »</span></label><textarea id="a-aboutEn" name="aboutEn" rows="9" maxlength="3000"></textarea></div>
+          <div class="field"><label for="a-tagsEn">Tags</label><input id="a-tagsEn" name="tagsEn" type="text" maxlength="400" /></div>
+          <div class="field"><label for="a-cvSummaryEn">Résumé summary</label><textarea id="a-cvSummaryEn" name="cvSummaryEn" rows="4" maxlength="700"></textarea></div>
+          <div class="form-row">
+            <div class="field"><label for="a-locationEn">Location</label><input id="a-locationEn" name="locationEn" type="text" maxlength="120" /></div>
+            <div class="field"><label for="a-interestsEn">Interests</label><input id="a-interestsEn" name="interestsEn" type="text" maxlength="300" /></div>
+          </div>
+        </details>
+        <div class="form-actions">
+          <p class="muted small" id="about-status" role="status"></p>
+          <button class="btn btn-ghost" type="button" id="about-reset">Revenir aux textes d'origine</button>
+          <button class="btn" type="submit" id="about-save">Enregistrer les textes</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- CV & partage -->
+    <div class="panel" id="panel-cv" role="tabpanel" aria-labelledby="tab-cv" hidden>
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">CV &amp; partage</h1>
+          <p class="muted">Ton CV PDF est fabriqué automatiquement à partir du contenu du site (profil, parcours, compétences, projets publiés), en français et en anglais.</p>
+        </div>
+      </div>
+
+      <div class="cv-box">
+        <div>
+          <h2 class="sub-title">CV téléchargeable</h2>
+          <p class="muted" id="cv-state">Vérification…</p>
+          <p class="muted small">Il se met à jour tout seul dès que tu enregistres une modification ici. Les visiteurs le téléchargent avec le bouton « Mon CV » du site.</p>
+        </div>
+        <div class="cv-actions">
+          <button class="btn" type="button" id="cv-generate">Régénérer maintenant</button>
+          <button class="btn btn-ghost" type="button" data-cv-preview="fr">Aperçu FR</button>
+          <button class="btn btn-ghost" type="button" data-cv-preview="en">Aperçu EN</button>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="year-box qr-box">
+          <h2 class="sub-title">QR code du portfolio</h2>
+          <p class="muted">À imprimer sur une carte de visite, un rapport de stage ou une affiche.</p>
+          <div class="qr-row">
+            <div class="qr-preview" id="qr-preview" aria-label="Aperçu du QR code" role="img"></div>
+            <div class="profile-actions">
+              <select id="qr-lang" aria-label="Langue du site ouvert par le QR code">
+                <option value="fr">Site en français</option>
+                <option value="en">Site en anglais</option>
+              </select>
+              <button class="btn btn-small" type="button" id="qr-png">Télécharger (PNG)</button>
+              <button class="btn btn-ghost btn-small" type="button" id="qr-svg">Télécharger (SVG, impression)</button>
+            </div>
+          </div>
+        </div>
+
+        <form class="year-box" id="integrations-form" novalidate>
+          <h2 class="sub-title">Services gratuits (facultatif)</h2>
+          <div class="field">
+            <label for="i-goatcounter">Statistiques de visites — code GoatCounter</label>
+            <input id="i-goatcounter" name="goatcounter" type="text" maxlength="60" placeholder="ex. cenuel (pour cenuel.goatcounter.com)" />
+            <p class="muted small">Compte gratuit sur <a href="https://www.goatcounter.com/signup" target="_blank" rel="noopener">goatcounter.com</a> (sans cookies, respecte la vie privée).</p>
+          </div>
+          <fieldset class="fieldset">
+            <legend>Alerte email à chaque message — EmailJS</legend>
+            <div class="field"><label for="i-ej-public">Public Key</label><input id="i-ej-public" name="publicKey" type="text" maxlength="80" /></div>
+            <div class="form-row">
+              <div class="field"><label for="i-ej-service">Service ID</label><input id="i-ej-service" name="serviceId" type="text" maxlength="80" /></div>
+              <div class="field"><label for="i-ej-template">Template ID</label><input id="i-ej-template" name="templateId" type="text" maxlength="80" /></div>
+            </div>
+            <p class="muted small">Compte gratuit sur <a href="https://www.emailjs.com/" target="_blank" rel="noopener">emailjs.com</a> (200 emails/mois). Dans ton modèle d'email, utilise <code>{{from_name}}</code>, <code>{{from_email}}</code>, <code>{{subject}}</code> et <code>{{message}}</code>. Les messages restent aussi enregistrés dans l'onglet Messages.</p>
+          </fieldset>
+          <div class="form-actions">
+            <p class="muted small" id="integrations-status" role="status"></p>
+            <button class="btn" type="submit">Enregistrer</button>
+          </div>
+        </form>
       </div>
     </div>
   </section>
@@ -211,6 +384,20 @@
             <input id="f-order" name="order" type="number" step="1" value="0" />
           </div>
         </div>
+        <fieldset class="fieldset specs-box">
+          <legend>Fiche technique <span class="muted">(facultatif — affichée en cartouche dans le détail du projet)</span></legend>
+          <div class="specs-fields" id="specs-fields"></div>
+        </fieldset>
+        <details class="en-box">
+          <summary>Version anglaise <span class="muted">(facultatif)</span></summary>
+          <div class="field"><label for="f-titleEn">Title</label><input id="f-titleEn" name="titleEn" type="text" maxlength="120" /></div>
+          <div class="field"><label for="f-summaryEn">Summary (card)</label><textarea id="f-summaryEn" name="summaryEn" rows="2" maxlength="240"></textarea></div>
+          <div class="field"><label for="f-descriptionEn">Detailed description</label><textarea id="f-descriptionEn" name="descriptionEn" rows="5" maxlength="5000"></textarea></div>
+          <div class="field"><label for="f-tagsEn">Keywords (comma separated)</label><input id="f-tagsEn" name="tagsEn" type="text" maxlength="300" /></div>
+          <p class="photos-label">Technical sheet</p>
+          <div class="specs-fields" id="specs-fields-en"></div>
+          <p class="muted small">Les légendes anglaises des photos se saisissent sous chaque photo.</p>
+        </details>
         <div class="checks">
           <label class="switch"><input type="checkbox" name="published" id="f-published" checked /><span></span> Publié sur le site</label>
           <label class="switch"><input type="checkbox" name="featured" id="f-featured" /><span></span> À la une</label>
@@ -260,6 +447,14 @@
         <label for="s-title">Titre de la carte *</label>
         <input id="s-title" type="text" maxlength="80" required placeholder="Ex. Génie Mécanique" />
       </div>
+      <details class="en-box">
+        <summary>Version anglaise <span class="muted">(facultatif — sinon traduction automatique des termes connus)</span></summary>
+        <div class="form-row">
+          <div class="field"><label for="s-category-en">Small label</label><input id="s-category-en" type="text" maxlength="60" placeholder="Ex. Mechanics" /></div>
+          <div class="field"><label for="s-title-en">Card title</label><input id="s-title-en" type="text" maxlength="80" placeholder="Ex. Mechanical engineering" /></div>
+        </div>
+        <p class="muted small">Le nom anglais de chaque compétence se saisit dans la 2<sup>e</sup> case de chaque ligne ci-dessous.</p>
+      </details>
       <div>
         <p class="photos-label">Compétences de la carte</p>
         <p class="muted small">Le niveau affiche une barre (Notions → Expert). « Sans niveau » affiche un simple point.</p>
@@ -271,6 +466,59 @@
       <p class="muted small" id="skill-status" role="status"></p>
       <button class="btn btn-ghost" type="button" data-skill-cancel>Annuler</button>
       <button class="btn" type="submit" id="skill-save">Enregistrer</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- Éditeur d'un élément du parcours -->
+<dialog class="editor skill-editor" id="parcours-editor" aria-labelledby="parcours-editor-title">
+  <form id="parcours-form" method="dialog" novalidate>
+    <header class="editor-head">
+      <h2 id="parcours-editor-title">Élément du parcours</h2>
+      <button class="icon-btn" type="button" data-parcours-cancel aria-label="Fermer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="editor-body single">
+      <div class="form-row">
+        <div class="field">
+          <label for="p-kind">Type</label>
+          <select id="p-kind" name="kind">
+            <option value="education">Formation</option>
+            <option value="experience">Expérience (stage, job…)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="p-period">Période</label>
+          <input id="p-period" name="period" type="text" maxlength="60" placeholder="Ex. Juil. — Août 2026" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="p-title">Intitulé *</label>
+        <input id="p-title" name="title" type="text" maxlength="140" required placeholder="Ex. Stage d'usinage" />
+      </div>
+      <div class="field">
+        <label for="p-place">Lieu / entreprise</label>
+        <input id="p-place" name="place" type="text" maxlength="140" placeholder="Ex. SONEB · Cotonou" />
+      </div>
+      <div class="field">
+        <label for="p-description">Description</label>
+        <textarea id="p-description" name="description" rows="4" maxlength="1200" placeholder="Missions, machines utilisées, ce que tu as appris…"></textarea>
+      </div>
+      <details class="en-box">
+        <summary>Version anglaise <span class="muted">(facultatif)</span></summary>
+        <div class="form-row">
+          <div class="field"><label for="p-periodEn">Period</label><input id="p-periodEn" name="periodEn" type="text" maxlength="60" placeholder="Ex. Jul — Aug 2026" /></div>
+          <div class="field"><label for="p-placeEn">Place / company</label><input id="p-placeEn" name="placeEn" type="text" maxlength="140" /></div>
+        </div>
+        <div class="field"><label for="p-titleEn">Title</label><input id="p-titleEn" name="titleEn" type="text" maxlength="140" /></div>
+        <div class="field"><label for="p-descriptionEn">Description</label><textarea id="p-descriptionEn" name="descriptionEn" rows="4" maxlength="1200"></textarea></div>
+      </details>
+    </div>
+    <footer class="editor-foot">
+      <p class="muted small" id="parcours-status" role="status"></p>
+      <button class="btn btn-ghost" type="button" data-parcours-cancel>Annuler</button>
+      <button class="btn" type="submit" id="parcours-save">Enregistrer</button>
     </footer>
   </form>
 </dialog>

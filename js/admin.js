@@ -1,8 +1,14 @@
 import {
-  isConfigured, getFirestoreKit, getAuthKit, ADMIN_EMAIL, CATEGORIES,
+  isConfigured, getFirestoreKit, getAuthKit, ADMIN_EMAIL,
   safeImage, safeLink, formatMonth, sortProjects
 } from './firebase.js';
-import { LEVELS, SKILL_ICONS, DEFAULT_SKILLS, YEAR_OPTIONS, sanitizeSkills, renderSkillCard } from './skills.js';
+import { LEVELS, SKILL_ICONS, DEFAULT_SKILLS, sanitizeSkills, renderSkillCard } from './skills.js';
+import {
+  SITE_URL, CATEGORIES, YEAR_OPTIONS, AVAILABILITY, DEFAULT_ABOUT, sanitizeAbout,
+  DEFAULT_PARCOURS, sanitizeParcours, PARCOURS_KINDS, SPEC_FIELDS, sanitizeSpecs
+} from './content.js';
+import { cvData, cvHash, generateCv } from './cv.js';
+import { qrcode } from './vendor/qrcode.mjs';
 import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE, THUMB } from './image-utils.js';
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -75,11 +81,10 @@ async function start() {
     const isAdmin = (user.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase() && user.emailVerified;
     if (!isAdmin) { $('#denied-email').textContent = user.email || 'inconnu'; showState('state-denied'); return; }
     showState('state-app');
-    loadProjects();
     loadMessages();
-    loadProfile();
-    loadSkills();
-    loadInfo();
+    // Une fois tout chargé, le CV est vérifié (et régénéré s'il n'est plus à jour)
+    Promise.allSettled([loadProjects(), loadProfile(), loadSkills(), loadInfo(), loadAbout(), loadParcours(), loadIntegrations()])
+      .then(() => { contentReady = true; scheduleCv(0); });
   });
 }
 
@@ -219,6 +224,7 @@ async function togglePublished(p, btn) {
     p.published = published;
     renderProjects();
     toast(published ? 'Projet publié sur le site.' : 'Projet retiré du site.');
+    scheduleCv();
   } catch (err) {
     console.error(err); toast(explain(err), 'err');
   } finally { btn.disabled = false; }
@@ -238,6 +244,7 @@ async function deleteProject(p) {
     projects = projects.filter(x => x.id !== p.id);
     renderProjects();
     toast('Projet supprimé.');
+    scheduleCv();
   } catch (err) {
     console.error(err); toast(explain(err), 'err');
   }
@@ -274,7 +281,15 @@ let state = null;   // { id, isNew, images: [...], removed: [], coverKey, origin
 let keySeq = 0;
 let busy = false;
 
-$('#f-category').append(...CATEGORIES.map(c => el('option', { value: c, text: c })));
+$('#f-category').append(...CATEGORIES.map(c => el('option', { value: c.fr, text: c.fr })));
+// Champs de la fiche technique (français et anglais)
+const specInput = (f, en) => el('div', { class: 'field' }, [
+  el('label', { htmlFor: `f-spec${en ? 'En' : ''}-${f.key}`, text: en ? f.en : f.fr }),
+  el('input', { id: `f-spec${en ? 'En' : ''}-${f.key}`, name: `spec${en ? 'En' : ''}-${f.key}`, type: 'text', maxLength: 300, placeholder: en ? '' : f.hint })
+]);
+$('#specs-fields').append(...SPEC_FIELDS.map(f => specInput(f, false)));
+$('#specs-fields-en').append(...SPEC_FIELDS.map(f => specInput(f, true)));
+const readSpecs = en => sanitizeSpecs(Object.fromEntries(SPEC_FIELDS.map(f => [f.key, form.elements[`spec${en ? 'En' : ''}-${f.key}`].value])));
 
 function updateCounters() {
   $$('[data-count]', form).forEach(h => {
@@ -291,7 +306,7 @@ async function openEditor(p = null) {
   $('#editor-status').textContent = '';
   if (p) {
     form.elements.title.value = p.title || '';
-    form.elements.category.value = CATEGORIES.includes(p.category) ? p.category : 'Autre';
+    form.elements.category.value = CATEGORIES.some(c => c.fr === p.category) ? p.category : 'Autre';
     form.elements.date.value = p.date || '';
     form.elements.summary.value = p.summary || '';
     form.elements.description.value = p.description || '';
@@ -300,7 +315,17 @@ async function openEditor(p = null) {
     form.elements.order.value = p.order ?? 0;
     form.elements.published.checked = Boolean(p.published);
     form.elements.featured.checked = Boolean(p.featured);
+    form.elements.titleEn.value = p.titleEn || '';
+    form.elements.summaryEn.value = p.summaryEn || '';
+    form.elements.descriptionEn.value = p.descriptionEn || '';
+    form.elements.tagsEn.value = (p.tagsEn || []).join(', ');
+    SPEC_FIELDS.forEach(f => {
+      form.elements[`spec-${f.key}`].value = p.specs?.[f.key] || '';
+      form.elements[`specEn-${f.key}`].value = p.specsEn?.[f.key] || '';
+    });
+    form.querySelector('.en-box').open = Boolean(p.titleEn || p.summaryEn || p.descriptionEn);
   } else {
+    form.querySelector('.en-box').open = false;
     form.elements.order.value = projects.length;
   }
   updateCounters();
@@ -316,7 +341,7 @@ async function openEditor(p = null) {
       const byId = new Map(docs.map(d => [d.id, d.data()]));
       state.images = p.images.filter(i => byId.has(i.id)).map(i => {
         const d = byId.get(i.id);
-        return { key: ++keySeq, id: i.id, caption: i.caption || d.caption || '', savedCaption: i.caption || d.caption || '', preview: safeImage(d.data), width: d.width, height: d.height, savedPublished: d.published };
+        return { key: ++keySeq, id: i.id, caption: i.caption || d.caption || '', captionEn: i.captionEn || '', savedCaption: i.caption || d.caption || '', preview: safeImage(d.data), width: d.width, height: d.height, savedPublished: d.published };
       });
       state.coverKey = state.images.find(i => i.id === p.coverId)?.key ?? state.images[0]?.key ?? null;
       renderPhotos();
@@ -337,6 +362,8 @@ function renderPhotos() {
     const isCover = img.key === state.coverKey;
     const caption = el('input', { type: 'text', value: img.caption, maxLength: 200, placeholder: 'Légende (optionnelle)', 'aria-label': `Légende de la photo ${i + 1}` });
     caption.addEventListener('input', () => { img.caption = caption.value; });
+    const captionEn = el('input', { type: 'text', value: img.captionEn || '', maxLength: 200, placeholder: 'Caption in English (optional)', 'aria-label': `Légende anglaise de la photo ${i + 1}`, class: 'caption-en' });
+    captionEn.addEventListener('input', () => { img.captionEn = captionEn.value; });
     const btn = (label, title, fn, cls = '', disabled = false) => {
       const b = el('button', { type: 'button', text: label, title, class: cls, 'aria-label': title, disabled });
       b.addEventListener('click', fn);
@@ -348,6 +375,7 @@ function renderPhotos() {
       el('img', { src: img.preview || '', alt: '' }),
       el('div', {}, [
         caption,
+        captionEn,
         el('p', { class: 'p-meta', text: img.processing ? 'Compression…' : [isCover ? 'Couverture' : '', img.width ? `${img.width}×${img.height}px` : '', sizeKb ? `${sizeKb} Ko` : '', img.id ? '' : 'nouvelle'].filter(Boolean).join(' · ') })
       ]),
       el('div', { class: 'photo-tools' }, [
@@ -370,7 +398,7 @@ async function addFiles(files) {
   const room = MAX_PHOTOS - state.images.length;
   if (room <= 0) { toast(`Maximum ${MAX_PHOTOS} photos par projet.`, 'err'); return; }
   if (list.length > room) toast(`Seules ${room} photo(s) ont été ajoutées (maximum ${MAX_PHOTOS}).`, 'err');
-  const items = list.slice(0, room).map(file => ({ key: ++keySeq, id: null, caption: '', preview: '', processing: true, file }));
+  const items = list.slice(0, room).map(file => ({ key: ++keySeq, id: null, caption: '', captionEn: '', preview: '', processing: true, file }));
   state.images.push(...items);
   renderPhotos();
   for (const item of items) {
@@ -474,13 +502,19 @@ form.addEventListener('submit', async e => {
       summary: form.elements.summary.value.trim(),
       description: form.elements.description.value.trim(),
       tags: parseTags(form.elements.tags.value),
+      titleEn: form.elements.titleEn.value.trim(),
+      summaryEn: form.elements.summaryEn.value.trim(),
+      descriptionEn: form.elements.descriptionEn.value.trim(),
+      tagsEn: parseTags(form.elements.tagsEn.value),
+      specs: readSpecs(false),
+      specsEn: readSpecs(true),
       link: link ? safeLink(link) : '',
       order: Number(form.elements.order.value) || 0,
       published,
       featured: form.elements.featured.checked,
       cover,
       coverId: coverImg?.id || '',
-      images: state.images.map(i => ({ id: i.id, caption: i.caption.trim() })),
+      images: state.images.map(i => ({ id: i.id, caption: i.caption.trim(), captionEn: (i.captionEn || '').trim() })),
       updatedAt: fs.serverTimestamp()
     };
     if (state.isNew) data.createdAt = fs.serverTimestamp();
@@ -490,7 +524,7 @@ form.addEventListener('submit', async e => {
     busy = false;
     editor.close();
     toast(published ? 'Projet enregistré et publié.' : 'Projet enregistré en brouillon.');
-    loadProjects();
+    loadProjects().then(() => scheduleCv());
   } catch (err) {
     console.error(err);
     status.textContent = '';
@@ -555,10 +589,12 @@ function renderMessages(list) {
    PHOTO DE PROFIL
    ===================================================== */
 const DEFAULT_PHOTO = 'assets/cenuel-chaffa.webp';
+let profilePhoto = '';   // photo personnalisée (data URL), vide = photo par défaut
 async function loadProfile() {
   try {
     const snap = await fs.getDoc(fs.doc(db, 'settings', 'profile'));
     const photo = snap.exists() ? safeImage(snap.data().photo) : '';
+    profilePhoto = photo;
     $('#profile-preview').src = photo || DEFAULT_PHOTO;
     $('#profile-status').textContent = photo ? 'Photo personnalisée en ligne.' : 'Photo par défaut du site.';
   } catch (err) { console.error(err); }
@@ -575,6 +611,8 @@ $('#profile-file').addEventListener('change', async e => {
     img.close?.();
     await fs.setDoc(fs.doc(db, 'settings', 'profile'), { photo: data, updatedAt: fs.serverTimestamp() });
     $('#profile-preview').src = data;
+    profilePhoto = data;
+    if (about.cvPhoto) scheduleCv();
     status.textContent = 'Photo de profil mise à jour sur le site.';
     toast('Photo de profil mise à jour.');
   } catch (err) {
@@ -585,6 +623,8 @@ $('#profile-reset').addEventListener('click', async () => {
   try {
     await fs.deleteDoc(fs.doc(db, 'settings', 'profile'));
     $('#profile-preview').src = DEFAULT_PHOTO;
+    profilePhoto = '';
+    if (about.cvPhoto) scheduleCv();
     $('#profile-status').textContent = 'Photo par défaut du site.';
     toast('Photo par défaut rétablie.');
   } catch (err) { toast(explain(err), 'err'); }
@@ -616,6 +656,7 @@ async function saveSkills(message) {
   skillsSaved = true;
   renderSkillsAdmin();
   toast(message);
+  scheduleCv();
 }
 
 function renderSkillsAdmin() {
@@ -648,7 +689,8 @@ function renderSkillsAdmin() {
 }
 
 function addSkillRow(item = { name: '', level: 3 }) {
-  const name = el('input', { type: 'text', value: item.name, maxLength: 120, placeholder: 'Ex. Usinage sur tour', 'aria-label': 'Nom de la compétence' });
+  const name = el('input', { type: 'text', value: item.name, maxLength: 120, placeholder: 'Ex. Usinage sur tour', 'aria-label': 'Nom de la compétence', class: 'sk-name' });
+  const nameEn = el('input', { type: 'text', value: item.nameEn || '', maxLength: 120, placeholder: 'In English (optional)', 'aria-label': 'Nom en anglais', class: 'sk-name-en' });
   const level = el('select', { 'aria-label': 'Niveau' }, LEVELS.map(l => el('option', { value: String(l.value), text: l.label })));
   level.value = String(item.level ?? 0);
   const row = el('li', { class: 'skill-row' });
@@ -657,7 +699,7 @@ function addSkillRow(item = { name: '', level: 3 }) {
     b.addEventListener('click', fn);
     return b;
   };
-  row.append(name, level, el('div', { class: 'photo-tools' }, [
+  row.append(name, nameEn, level, el('div', { class: 'photo-tools' }, [
     tool('↑', 'Monter', () => row.previousElementSibling && skillRows.insertBefore(row, row.previousElementSibling)),
     tool('↓', 'Descendre', () => row.nextElementSibling && skillRows.insertBefore(row.nextElementSibling, row)),
     tool('✕', 'Retirer', () => row.remove(), 'del')
@@ -673,6 +715,8 @@ function openSkillEditor(index = null) {
   $('#s-category').value = card.category;
   $('#s-title').value = card.title;
   $('#s-icon').value = card.icon;
+  $('#s-category-en').value = card.categoryEn || '';
+  $('#s-title-en').value = card.titleEn || '';
   $('#skill-status').textContent = '';
   skillRows.replaceChildren();
   (card.items.length ? card.items : [{ name: '', level: 3 }]).forEach(addSkillRow);
@@ -690,10 +734,13 @@ $('#skill-form').addEventListener('submit', async e => {
   if (!title) { $('#s-title').setAttribute('aria-invalid', 'true'); $('#s-title').focus(); return; }
   $('#s-title').removeAttribute('aria-invalid');
   const items = $$('.skill-row', skillRows)
-    .map(r => ({ name: $('input', r).value.trim(), level: Number($('select', r).value) }))
+    .map(r => ({ name: $('.sk-name', r).value.trim(), nameEn: $('.sk-name-en', r).value.trim(), level: Number($('select', r).value) }))
     .filter(i => i.name);
   if (!items.length) { $('#skill-status').textContent = 'Ajoute au moins une compétence.'; return; }
-  const card = sanitizeSkills([{ category: $('#s-category').value.trim(), title, icon: $('#s-icon').value, items }])[0];
+  const card = sanitizeSkills([{
+    category: $('#s-category').value.trim(), categoryEn: $('#s-category-en').value.trim(),
+    title, titleEn: $('#s-title-en').value.trim(), icon: $('#s-icon').value, items
+  }])[0];
   const previous = structuredClone(skillCards);
   if (editingIndex === null) skillCards.push(card); else skillCards[editingIndex] = card;
   const btn = $('#skill-save');
@@ -709,20 +756,404 @@ $('#skill-form').addEventListener('submit', async e => {
 });
 
 /* =====================================================
-   ANNÉE D'ÉTUDE
+   ANNÉE D'ÉTUDE ET DISPONIBILITÉ (settings/info)
    ===================================================== */
+let info = { gmpYear: 2, availability: 'open', cv: null };
+
 $('#year-select').append(...YEAR_OPTIONS.map(y => el('option', { value: String(y.value), text: y.text.charAt(0).toUpperCase() + y.text.slice(1) + ' GMP' })));
+$('#availability-select').append(...Object.entries(AVAILABILITY).map(([k, v]) => el('option', { value: k, text: v.fr })));
+
 async function loadInfo() {
   try {
     const snap = await fs.getDoc(fs.doc(db, 'settings', 'info'));
-    $('#year-select').value = String(snap.exists() ? snap.data().gmpYear : 2);
+    const d = snap.exists() ? snap.data() : {};
+    info = {
+      gmpYear: Number(d.gmpYear) || 2,
+      availability: AVAILABILITY[d.availability] ? d.availability : 'open',
+      cv: d.cv || null
+    };
+    $('#year-select').value = String(info.gmpYear);
+    $('#availability-select').value = info.availability;
+    renderCvState();
   } catch (err) { console.error(err); }
 }
-$('#year-save').addEventListener('click', async () => {
+
+async function saveInfo(fields, statusEl, message) {
   try {
-    await fs.setDoc(fs.doc(db, 'settings', 'info'), { gmpYear: Number($('#year-select').value), updatedAt: fs.serverTimestamp() }, { merge: true });
-    $('#year-status').textContent = 'Année mise à jour sur le site.';
-    toast('Année d\'étude mise à jour.');
+    await fs.setDoc(fs.doc(db, 'settings', 'info'), { ...fields, updatedAt: fs.serverTimestamp() }, { merge: true });
+    Object.assign(info, fields);
+    statusEl.textContent = message;
+    toast(message);
+  } catch (err) { toast(explain(err), 'err'); }
+}
+$('#year-save').addEventListener('click', async () => {
+  await saveInfo({ gmpYear: Number($('#year-select').value) }, $('#year-status'), 'Année d\'étude mise à jour sur le site.');
+  scheduleCv();
+});
+$('#availability-save').addEventListener('click', () =>
+  saveInfo({ availability: $('#availability-select').value }, $('#availability-status'), 'Disponibilité mise à jour sur le site.'));
+
+/* =====================================================
+   TEXTES DE PRÉSENTATION (settings/about)
+   ===================================================== */
+let about = sanitizeAbout(null);
+const aboutForm = $('#about-form');
+const langRows = $('#lang-rows');
+const ABOUT_FIELDS = ['title', 'hero', 'about', 'tags', 'cvSummary', 'email', 'phone', 'linkedin', 'location', 'interests'];
+const ABOUT_EN = ['title', 'hero', 'about', 'tags', 'cvSummary', 'location', 'interests'];
+const ABOUT_LABELS = { title: 'Titre', hero: 'Accroche', about: 'À propos', tags: 'Étiquettes', cvSummary: 'Résumé du CV', location: 'Localisation', interests: 'Centres d\'intérêt' };
+
+function addLangRow(l = { name: '', nameEn: '', level: '', levelEn: '' }) {
+  const input = (value, placeholder, label, cls) => el('input', { type: 'text', value, maxLength: cls.startsWith('l-level') ? 60 : 40, placeholder, 'aria-label': label, class: cls });
+  const row = el('li', { class: 'skill-row lang-row' }, [
+    input(l.name, 'Ex. Anglais', 'Langue', 'l-name'),
+    input(l.level, 'Ex. Intermédiaire (B1)', 'Niveau', 'l-level'),
+    input(l.nameEn, 'English', 'Langue en anglais', 'l-name-en'),
+    input(l.levelEn, 'Intermediate (B1)', 'Niveau en anglais', 'l-level-en')
+  ]);
+  const del = el('button', { type: 'button', text: '✕', title: 'Retirer', 'aria-label': 'Retirer la langue', class: 'del' });
+  del.addEventListener('click', () => row.remove());
+  row.append(el('div', { class: 'photo-tools' }, [del]));
+  langRows.append(row);
+  return row;
+}
+$('#add-lang-row').addEventListener('click', () => $('input', addLangRow()).focus());
+
+function fillAboutForm() {
+  [...ABOUT_FIELDS, ...ABOUT_EN.map(k => k + 'En')].forEach(k => { aboutForm.elements[k].value = about[k] || ''; });
+  aboutForm.elements.cvProjects.value = about.cvProjects;
+  aboutForm.elements.cvPhoto.checked = about.cvPhoto;
+  langRows.replaceChildren();
+  about.languages.forEach(addLangRow);
+}
+
+async function loadAbout() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'about'));
+    about = sanitizeAbout(snap.exists() ? snap.data() : null);
+    fillAboutForm();
+  } catch (err) { console.error(err); }
+}
+
+aboutForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const v = k => aboutForm.elements[k].value.trim();
+  const status = $('#about-status');
+  if (v('email') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('email'))) { toast('Adresse email invalide.', 'err'); aboutForm.elements.email.focus(); return; }
+  if (v('linkedin') && !safeLink(v('linkedin'))) { toast('Le lien LinkedIn doit commencer par https://', 'err'); aboutForm.elements.linkedin.focus(); return; }
+
+  const data = Object.fromEntries(ABOUT_FIELDS.map(k => [k, v(k)]));
+  const stale = [];
+  ABOUT_EN.forEach(k => {
+    let en = v(k + 'En');
+    // Français modifié mais anglais resté sur le texte d'origine : l'ancienne traduction serait fausse
+    if (en && en === DEFAULT_ABOUT[k + 'En'] && data[k] !== DEFAULT_ABOUT[k]) { en = ''; stale.push(ABOUT_LABELS[k]); }
+    data[k + 'En'] = en;
+  });
+  if (data.linkedin) data.linkedin = safeLink(data.linkedin);
+  data.languages = $$('.lang-row', langRows)
+    .map(r => ({ name: $('.l-name', r).value.trim(), nameEn: $('.l-name-en', r).value.trim(), level: $('.l-level', r).value.trim(), levelEn: $('.l-level-en', r).value.trim() }))
+    .filter(l => l.name);
+  data.cvProjects = Math.max(0, Math.min(8, Math.round(Number(aboutForm.elements.cvProjects.value) || 0)));
+  data.cvPhoto = aboutForm.elements.cvPhoto.checked;
+
+  const btn = $('#about-save');
+  btn.disabled = true;
+  try {
+    await fs.setDoc(fs.doc(db, 'settings', 'about'), { ...data, updatedAt: fs.serverTimestamp() });
+    about = sanitizeAbout(data);
+    fillAboutForm();
+    status.textContent = stale.length
+      ? `Enregistré. Version anglaise à mettre à jour : ${stale.join(', ')} (en attendant, le texte français s'affiche en anglais).`
+      : 'Textes enregistrés sur le site.';
+    toast('Textes de présentation enregistrés.');
+    scheduleCv();
+  } catch (err) {
+    console.error(err); toast(explain(err), 'err');
+  } finally { btn.disabled = false; }
+});
+
+$('#about-reset').addEventListener('click', async () => {
+  if (!confirm('Remettre tous les textes de présentation tels qu\'ils étaient à l\'origine ?')) return;
+  try {
+    await fs.deleteDoc(fs.doc(db, 'settings', 'about'));
+    about = sanitizeAbout(null);
+    fillAboutForm();
+    $('#about-status').textContent = 'Textes d\'origine rétablis.';
+    toast('Textes d\'origine rétablis.');
+    scheduleCv();
+  } catch (err) { toast(explain(err), 'err'); }
+});
+
+/* =====================================================
+   PARCOURS (settings/parcours)
+   ===================================================== */
+let parcoursItems = structuredClone(DEFAULT_PARCOURS);
+let parcoursSaved = false;
+let parcoursIndex = null;
+const parcoursEditor = $('#parcours-editor');
+const parcoursForm = $('#parcours-form');
+const PARCOURS_FIELDS = ['kind', 'period', 'periodEn', 'title', 'titleEn', 'place', 'placeEn', 'description', 'descriptionEn'];
+
+async function loadParcours() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'parcours'));
+    parcoursSaved = snap.exists() && Array.isArray(snap.data().items);
+    parcoursItems = parcoursSaved ? sanitizeParcours(snap.data().items) : structuredClone(DEFAULT_PARCOURS);
+    renderParcoursAdmin();
+  } catch (err) { console.error(err); toast(explain(err), 'err'); }
+}
+
+async function saveParcours(message) {
+  await fs.setDoc(fs.doc(db, 'settings', 'parcours'), { items: parcoursItems, updatedAt: fs.serverTimestamp() });
+  parcoursSaved = true;
+  renderParcoursAdmin();
+  toast(message);
+  scheduleCv();
+}
+
+function renderParcoursAdmin() {
+  $('#parcours-default-note').hidden = parcoursSaved;
+  const box = $('#parcours-admin');
+  if (!parcoursItems.length) {
+    box.replaceChildren(el('div', { class: 'empty-state' }, [el('p', { text: 'Aucun élément. Ajoute une formation ou une expérience.' })]));
+    return;
+  }
+  box.replaceChildren(...parcoursItems.map((item, i) => {
+    const btn = (label, fn, cls = '', disabled = false) => {
+      const b = el('button', { type: 'button', text: label, class: cls, disabled });
+      b.addEventListener('click', fn);
+      return b;
+    };
+    const move = async d => {
+      const j = i + d;
+      [parcoursItems[i], parcoursItems[j]] = [parcoursItems[j], parcoursItems[i]];
+      try { await saveParcours('Ordre mis à jour.'); } catch (err) { toast(explain(err), 'err'); loadParcours(); }
+    };
+    return el('article', { class: `a-card parcours-card ${item.kind}` }, [
+      el('div', { class: 'a-card-body' }, [
+        el('div', { class: 'a-meta' }, [
+          el('span', { class: `status ${item.kind === 'experience' ? 'star' : ''}`, text: PARCOURS_KINDS[item.kind].fr }),
+          item.period ? el('span', { class: 'status', text: item.period }) : null,
+          item.titleEn ? el('span', { class: 'status', text: 'EN ✓' }) : null
+        ]),
+        el('h3', { class: 'a-card-title', text: item.title }),
+        item.place ? el('p', { class: 'muted small', text: item.place }) : null
+      ]),
+      el('div', { class: 'a-actions' }, [
+        btn('Modifier', () => openParcoursEditor(i)),
+        btn('↑', () => move(-1), '', i === 0),
+        btn('↓', () => move(1), '', i === parcoursItems.length - 1),
+        btn('Supprimer', async () => {
+          if (!confirm(`Supprimer « ${item.title} » du parcours ?`)) return;
+          parcoursItems.splice(i, 1);
+          try { await saveParcours('Élément supprimé.'); } catch (err) { toast(explain(err), 'err'); loadParcours(); }
+        }, 'danger')
+      ])
+    ]);
+  }));
+}
+
+function openParcoursEditor(index = null, kind = 'education') {
+  parcoursIndex = index;
+  const item = index === null ? { kind } : parcoursItems[index];
+  $('#parcours-editor-title').textContent = index === null
+    ? (kind === 'experience' ? 'Nouvelle expérience' : 'Nouvelle formation')
+    : 'Modifier l\'élément';
+  PARCOURS_FIELDS.forEach(k => { parcoursForm.elements[k].value = item[k] || (k === 'kind' ? 'education' : ''); });
+  $('.en-box', parcoursForm).open = Boolean(item.titleEn);
+  $('#parcours-status').textContent = '';
+  parcoursEditor.showModal();
+  parcoursForm.elements.title.focus();
+}
+$$('[data-new-parcours]').forEach(b => b.addEventListener('click', () => openParcoursEditor(null, b.dataset.newParcours)));
+$$('[data-parcours-cancel]', parcoursEditor).forEach(b => b.addEventListener('click', () => parcoursEditor.close()));
+
+parcoursForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const titleInput = parcoursForm.elements.title;
+  if (!titleInput.value.trim()) { titleInput.setAttribute('aria-invalid', 'true'); titleInput.focus(); return; }
+  titleInput.removeAttribute('aria-invalid');
+  const item = sanitizeParcours([Object.fromEntries(PARCOURS_FIELDS.map(k => [k, parcoursForm.elements[k].value.trim()]))])[0];
+  const previous = structuredClone(parcoursItems);
+  if (parcoursIndex === null) {
+    // Une nouvelle expérience se place avant les formations (plus récent en premier sur le CV)
+    parcoursItems.splice(item.kind === 'experience' ? 0 : parcoursItems.length, 0, item);
+  } else parcoursItems[parcoursIndex] = item;
+  const btn = $('#parcours-save');
+  btn.disabled = true;
+  try {
+    await saveParcours(parcoursIndex === null ? 'Ajouté au parcours.' : 'Parcours mis à jour.');
+    parcoursEditor.close();
+  } catch (err) {
+    console.error(err);
+    parcoursItems = previous;
+    $('#parcours-status').textContent = explain(err);
+  } finally { btn.disabled = false; }
+});
+
+/* =====================================================
+   CV PDF (settings/cv-fr, settings/cv-en)
+   ===================================================== */
+const CV_LAYOUT = 1;          // à incrémenter si la mise en page du CV change
+let contentReady = false;     // vrai quand toutes les données sont chargées
+let cvTimer = null, cvRunning = false, cvAgain = false;
+const cvCache = {};
+
+function scheduleCv(delay = 1200) {
+  if (!contentReady) return;
+  clearTimeout(cvTimer);
+  cvTimer = setTimeout(() => refreshCv(), delay);
+}
+
+function cvSources() {
+  const src = { about, parcours: parcoursItems, skills: skillCards, projects, info };
+  return { fr: cvData(src, 'fr'), en: cvData(src, 'en') };
+}
+
+function setCvState(text, cls = '') {
+  const p = $('#cv-state');
+  p.textContent = text;
+  p.className = cls || 'muted';
+}
+
+function renderCvState() {
+  const cv = info.cv;
+  if (!cv?.updatedAt) { setCvState('Pas encore généré : le bouton « Mon CV » est masqué sur le site.'); return; }
+  const date = cv.updatedAt.toDate ? cv.updatedAt.toDate() : new Date(cv.updatedAt);
+  setCvState(`✓ À jour — généré le ${date.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}, en français et en anglais.`, 'ok-text');
+}
+
+async function refreshCv(force = false) {
+  if (cvRunning) { cvAgain = true; return; }
+  cvRunning = true;
+  const btn = $('#cv-generate');
+  try {
+    const data = cvSources();
+    const photo = profilePhoto || DEFAULT_PHOTO;
+    const hash = await cvHash({ layout: CV_LAYOUT, data, photo: about.cvPhoto ? photo.slice(-200) + photo.length : '' });
+    if (!force && info.cv?.hash === hash) { renderCvState(); return; }
+    btn.disabled = true;
+    setCvState('Génération du CV en cours…');
+    const out = {};
+    for (const lang of ['fr', 'en']) {
+      const { dataUrl } = await generateCv(data[lang], photo);
+      if (dataUrl.length > 900_000) throw new Error('Le CV dépasse la taille autorisée (essaie sans la photo).');
+      out[lang] = dataUrl;
+    }
+    const batch = fs.writeBatch(db);
+    for (const lang of ['fr', 'en']) {
+      batch.set(fs.doc(db, 'settings', `cv-${lang}`), { pdf: out[lang], size: Math.round(out[lang].length * 0.75), updatedAt: fs.serverTimestamp() });
+    }
+    batch.set(fs.doc(db, 'settings', 'info'), { cv: { updatedAt: fs.serverTimestamp(), hash } }, { merge: true });
+    await batch.commit();
+    Object.assign(cvCache, out);
+    info.cv = { updatedAt: new Date(), hash };
+    renderCvState();
+    toast('CV mis à jour (français + anglais).');
+  } catch (err) {
+    console.error(err);
+    setCvState(`Le CV n'a pas pu être mis à jour : ${explain(err)}`, 'err-text');
+  } finally {
+    cvRunning = false;
+    btn.disabled = false;
+    if (cvAgain) { cvAgain = false; scheduleCv(0); }
+  }
+}
+$('#cv-generate').addEventListener('click', () => refreshCv(true));
+
+$$('[data-cv-preview]').forEach(b => b.addEventListener('click', async () => {
+  const lang = b.dataset.cvPreview;
+  const win = window.open('', '_blank');   // ouvert tout de suite pour éviter le blocage des pop-ups
+  try {
+    let pdf = cvCache[lang];
+    if (!pdf) {
+      const snap = await fs.getDoc(fs.doc(db, 'settings', `cv-${lang}`));
+      pdf = snap.exists() ? snap.data().pdf : '';
+    }
+    if (!/^data:application\/pdf;base64,/.test(pdf || '')) {
+      win?.close();
+      toast('Le CV n\'a pas encore été généré.', 'err');
+      return;
+    }
+    const url = URL.createObjectURL(await (await fetch(pdf)).blob());
+    if (win) win.location.href = url; else location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+  } catch (err) { win?.close(); toast(explain(err), 'err'); }
+}));
+
+/* =====================================================
+   QR CODE DU PORTFOLIO
+   ===================================================== */
+function qrModules() {
+  const q = qrcode(0, 'M');
+  q.addData($('#qr-lang').value === 'en' ? `${SITE_URL}?lang=en` : SITE_URL);
+  q.make();
+  const n = q.getModuleCount();
+  return { n, dark: (r, c) => q.isDark(r, c) };
+}
+function qrSvg(color = '#0b1a2b') {
+  const { n, dark } = qrModules();
+  const m = 4, size = n + m * 2;
+  let d = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (dark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="${color}"/></svg>`;
+}
+function renderQr() {
+  const img = el('img', { src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg())}`, alt: '' });
+  $('#qr-preview').replaceChildren(img);
+}
+function download(href, name) {
+  const a = el('a', { href, download: name });
+  document.body.append(a); a.click(); a.remove();
+}
+$('#qr-lang').addEventListener('change', renderQr);
+$('#qr-svg').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([qrSvg()], { type: 'image/svg+xml' }));
+  download(url, `QR-portfolio-${$('#qr-lang').value}.svg`);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+});
+$('#qr-png').addEventListener('click', () => {
+  const { n, dark } = qrModules();
+  const scale = 24, m = 4;
+  const canvas = el('canvas', { width: (n + m * 2) * scale, height: (n + m * 2) * scale });
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0b1a2b';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (dark(r, c)) ctx.fillRect((c + m) * scale, (r + m) * scale, scale, scale);
+  download(canvas.toDataURL('image/png'), `QR-portfolio-${$('#qr-lang').value}.png`);
+});
+renderQr();
+
+/* =====================================================
+   SERVICES GRATUITS (settings/integrations)
+   ===================================================== */
+const intForm = $('#integrations-form');
+async function loadIntegrations() {
+  try {
+    const snap = await fs.getDoc(fs.doc(db, 'settings', 'integrations'));
+    const d = snap.exists() ? snap.data() : {};
+    intForm.elements.goatcounter.value = d.goatcounter || '';
+    intForm.elements.publicKey.value = d.emailjs?.publicKey || '';
+    intForm.elements.serviceId.value = d.emailjs?.serviceId || '';
+    intForm.elements.templateId.value = d.emailjs?.templateId || '';
+  } catch (err) { console.error(err); }
+}
+intForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const v = k => intForm.elements[k].value.trim();
+  // Accepte « cenuel », « cenuel.goatcounter.com » ou l'adresse complète
+  const goatcounter = v('goatcounter').toLowerCase().replace(/^https?:\/\//, '').replace(/\.goatcounter\.com.*$/, '');
+  if (goatcounter && !/^[a-z0-9-]{2,60}$/.test(goatcounter)) { toast('Code GoatCounter invalide (lettres, chiffres et tirets).', 'err'); return; }
+  const emailjs = { publicKey: v('publicKey'), serviceId: v('serviceId'), templateId: v('templateId') };
+  if (Object.values(emailjs).some(x => x && !/^[\w-]{3,80}$/.test(x))) { toast('Identifiant EmailJS invalide.', 'err'); return; }
+  const filled = Object.values(emailjs).filter(Boolean).length;
+  if (filled && filled < 3) { toast('Remplis les trois champs EmailJS (ou aucun).', 'err'); return; }
+  try {
+    await fs.setDoc(fs.doc(db, 'settings', 'integrations'), { goatcounter, emailjs, updatedAt: fs.serverTimestamp() });
+    intForm.elements.goatcounter.value = goatcounter;
+    $('#integrations-status').textContent = 'Enregistré. Actif sur le site dès le prochain chargement.';
+    toast('Services enregistrés.');
   } catch (err) { toast(explain(err), 'err'); }
 });
 

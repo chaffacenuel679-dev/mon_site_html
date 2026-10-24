@@ -1,15 +1,25 @@
 // Compétences : données par défaut, icônes et rendu des cartes.
-// Partagé entre le site public (main.js) et l'administration (admin.js).
+// Partagé entre le site public (main.js), l'administration (admin.js) et le CV (cv.js).
+import { pick, translateTerm, isFallback } from './content.js';
 
 export const LEVELS = [
-  { value: 0, label: 'Sans niveau (simple point)' },
-  { value: 1, label: 'Notions' },
-  { value: 2, label: 'Débutant' },
-  { value: 3, label: 'Intermédiaire' },
-  { value: 4, label: 'Avancé' },
-  { value: 5, label: 'Expert' }
+  { value: 0, label: 'Sans niveau (simple point)', en: '' },
+  { value: 1, label: 'Notions', en: 'Basic' },
+  { value: 2, label: 'Débutant', en: 'Beginner' },
+  { value: 3, label: 'Intermédiaire', en: 'Intermediate' },
+  { value: 4, label: 'Avancé', en: 'Advanced' },
+  { value: 5, label: 'Expert', en: 'Expert' }
 ];
-export const levelLabel = v => LEVELS.find(l => l.value === Number(v))?.label || '';
+export const levelLabel = (v, lang = 'fr') => {
+  const l = LEVELS.find(x => x.value === Number(v));
+  return l ? (lang === 'en' ? l.en : l.label) : '';
+};
+
+/** Texte d'un champ de compétence dans la langue voulue (glossaire si la traduction manque). */
+export function skillText(obj, field, lang) {
+  const v = pick(obj, field, lang);
+  return lang === 'en' && isFallback(obj, field, lang) ? translateTerm(v) : v;
+}
 
 export const SKILL_ICONS = {
   gear: { label: 'Engrenage (mécanique)', svg: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="7"/>' },
@@ -70,23 +80,29 @@ export function sanitizeSkills(cards) {
   if (!Array.isArray(cards)) return [];
   return cards.slice(0, 24).map(c => ({
     category: String(c?.category || '').slice(0, 60),
+    categoryEn: String(c?.categoryEn || '').slice(0, 60),
     title: String(c?.title || '').slice(0, 80),
+    titleEn: String(c?.titleEn || '').slice(0, 80),
     icon: SKILL_ICONS[c?.icon] ? c.icon : 'gear',
     items: (Array.isArray(c?.items) ? c.items : []).slice(0, 20)
-      .map(i => ({ name: String(i?.name || '').slice(0, 120), level: Math.max(0, Math.min(5, Math.round(Number(i?.level) || 0))) }))
+      .map(i => ({
+        name: String(i?.name || '').slice(0, 120),
+        nameEn: String(i?.nameEn || '').slice(0, 120),
+        level: Math.max(0, Math.min(5, Math.round(Number(i?.level) || 0)))
+      }))
       .filter(i => i.name)
   })).filter(c => c.title);
 }
 
 /** Construit une carte de compétences identique à celles écrites dans index.html. */
-export function renderSkillCard(card) {
+export function renderSkillCard(card, lang = 'fr') {
   const art = document.createElement('article');
   art.className = 'skill-card reveal';
   const head = document.createElement('div');
   head.className = 'skill-head';
   head.innerHTML = `<span class="skill-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${SKILL_ICONS[card.icon]?.svg || SKILL_ICONS.gear.svg}</svg></span><div><p class="skill-cat"></p><h3></h3></div>`;
-  head.querySelector('.skill-cat').textContent = card.category;
-  head.querySelector('h3').textContent = card.title;
+  head.querySelector('.skill-cat').textContent = skillText(card, 'category', lang);
+  head.querySelector('h3').textContent = skillText(card, 'title', lang);
   art.append(head);
 
   const leveled = card.items.filter(i => i.level > 0);
@@ -97,8 +113,8 @@ export function renderSkillCard(card) {
     leveled.forEach(i => {
       const li = document.createElement('li');
       li.dataset.level = i.level;
-      const name = document.createElement('span'); name.textContent = i.name;
-      const lab = document.createElement('em'); lab.textContent = levelLabel(i.level);
+      const name = document.createElement('span'); name.textContent = skillText(i, 'name', lang);
+      const lab = document.createElement('em'); lab.textContent = levelLabel(i.level, lang);
       li.append(name, lab, document.createElement('i'));
       ul.append(li);
     });
@@ -108,14 +124,9 @@ export function renderSkillCard(card) {
     const ul = document.createElement('ul');
     ul.className = 'skill-list';
     if (leveled.length) ul.style.marginTop = '.6rem';
-    plain.forEach(i => { const li = document.createElement('li'); li.textContent = i.name; ul.append(li); });
+    plain.forEach(i => { const li = document.createElement('li'); li.textContent = skillText(i, 'name', lang); ul.append(li); });
     art.append(ul);
   }
   return art;
 }
 
-export const YEAR_OPTIONS = [
-  { value: 1, stat: '1<sup>re</sup> année GMP', text: 'première année' },
-  { value: 2, stat: '2<sup>e</sup> année GMP', text: 'deuxième année' },
-  { value: 3, stat: '3<sup>e</sup> année GMP', text: 'troisième année' }
-];

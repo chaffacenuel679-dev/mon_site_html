@@ -129,14 +129,51 @@ code { font-family: var(--font-mono); font-size: .85em; background: var(--bg-alt
 .skill-admin-card .levels li { --lvl: var(--target); }
 .editor-body.single { grid-template-columns: 1fr; max-width: 760px; width: 100%; margin-inline: auto; }
 .skill-rows { display: grid; gap: .5rem; margin: .8rem 0; }
-.skill-row { display: grid; grid-template-columns: 1fr 170px auto; gap: .5rem; align-items: center; }
+.skill-row { display: grid; grid-template-columns: 1fr 1fr 150px auto; gap: .5rem; align-items: center; }
+.skill-row .sk-name-en, .lang-row .l-name-en, .lang-row .l-level-en, .photo-item .caption-en { border-style: dashed; }
+.lang-row { grid-template-columns: 1fr 1.3fr 1fr 1.3fr auto; }
 .skill-row input, .skill-row select, .year-row select { width: 100%; font: inherit; font-size: .9rem; padding: .6rem .7rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
 .skill-row .photo-tools button { width: 32px; height: 32px; }
 .year-box { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); max-width: 560px; }
 .sub-title { font-family: var(--font-display); font-weight: 500; font-size: 1.35rem; margin-bottom: .3rem; }
 .year-row { display: flex; gap: .6rem; margin-top: 1rem; }
 .year-row select { max-width: 240px; }
-@media (max-width: 560px) { .skill-row { grid-template-columns: 1fr 1fr; } .skill-row input { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .skill-row, .lang-row { grid-template-columns: 1fr 1fr; } .skill-row .sk-name, .skill-row .sk-name-en { grid-column: 1 / -1; } }
+
+/* Profil étendu, parcours, CV */
+.head-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 2.5rem; }
+.settings-grid .year-box { max-width: none; }
+.about-form, #integrations-form { display: grid; gap: 1rem; align-content: start; }
+.about-form { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); max-width: 820px; }
+.about-form .field input, .about-form .field textarea, #integrations-form .field input, .about-form select { background: var(--bg); }
+.lang-row input { width: 100%; font: inherit; font-size: .9rem; padding: .6rem .7rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.check-field { align-self: end; padding-bottom: .7rem; }
+.form-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.form-actions p { margin-right: auto; flex: 1 1 220px; }
+.en-box { border: 1px dashed var(--line-strong); border-radius: 8px; padding: .2rem 1rem; }
+.en-box[open] { padding-bottom: 1rem; display: grid; gap: 1rem; }
+.en-box summary { cursor: pointer; padding: .7rem 0; font-weight: 600; font-size: .9rem; }
+.en-box summary .muted { font-weight: 400; font-size: .82rem; }
+.fieldset { border: 1px solid var(--line); border-radius: 8px; padding: .4rem 1rem 1rem; display: grid; gap: .8rem; }
+.fieldset legend { padding: 0 .4rem; font-weight: 600; font-size: .9rem; }
+.fieldset legend .muted { font-weight: 400; font-size: .8rem; }
+.specs-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; }
+.specs-fields .field label { font-size: .72rem; }
+.parcours-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.2rem; }
+.parcours-card.experience { border-left: 3px solid var(--accent); }
+.cv-box { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; padding: 1.5rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.cv-box > div:first-child { flex: 1 1 340px; }
+.cv-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.ok-text { color: #2e7d4f; font-weight: 600; }
+:root[data-theme="dark"] .ok-text { color: #6fcf97; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ok-text { color: #6fcf97; } }
+.err-text { color: #c0392b; font-weight: 600; }
+.qr-row { display: flex; gap: 1.4rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+.qr-preview { width: 150px; height: 150px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+.qr-preview img { width: 100%; height: 100%; display: block; }
+.qr-box select { width: 100%; font: inherit; font-size: .9rem; padding: .6rem .7rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.photo-item .caption-en { margin-top: .35rem; }
 
 /* Notifications */
 .toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 300; display: grid; gap: .5rem; max-width: min(380px, calc(100% - 2rem)); }
