@@ -111,7 +111,8 @@ export function applyStatic(scope = document) {
   scope.querySelectorAll('[data-i18n]').forEach(el => {
     if (!originals.has(el)) originals.set(el, el.innerHTML);
     const en = STATIC_EN[el.dataset.i18n];
-    el.innerHTML = lang === 'en' && en !== undefined ? en : originals.get(el);
+    const next = lang === 'en' && en !== undefined ? en : originals.get(el);
+    if (el.innerHTML !== next) el.innerHTML = next;   // ne réécrit que ce qui change (évite de redessiner la page)
   });
   scope.querySelectorAll('[data-i18n-attr]').forEach(el => {
     const pairs = el.dataset.i18nAttr.split(';').map(p => p.split(':').map(s => s.trim()));
@@ -119,7 +120,8 @@ export function applyStatic(scope = document) {
     const fr = originals.get(el);
     pairs.forEach(([attr, key]) => {
       const en = STATIC_EN[key];
-      el.setAttribute(attr, lang === 'en' && en !== undefined ? en : fr[attr]);
+      const next = lang === 'en' && en !== undefined ? en : fr[attr];
+      if (next !== null && el.getAttribute(attr) !== next) el.setAttribute(attr, next);
     });
   });
   document.documentElement.lang = lang;

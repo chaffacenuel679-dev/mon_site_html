@@ -8,11 +8,15 @@ projets et leurs photos depuis une page d'administration, sans toucher au code.
 
 ```
 index.html            Le site public
-admin.html            Ton espace privé : projets, photos, messages, photo de profil
+admin.html            Ton espace privé : projets, parcours, compétences, profil, CV, messages
 css/style.css         Styles du site (thème clair / sombre)
 css/admin.css         Styles de l'administration
-js/main.js            Animations, filtres, galerie photo, formulaire de contact
+js/main.js            Animations, filtres, galerie photo, partage, formulaire de contact
 js/admin.js           Logique de l'administration
+js/i18n.js            Version anglaise : détection de la langue et traductions de l'interface
+js/content.js         Textes par défaut (profil, parcours), catégories, glossaire FR → EN
+js/cv.js              Fabrication du CV PDF (français et anglais)
+js/vendor/            pdfmake (création du PDF) et qrcode-generator (QR code), licence MIT
 js/image-utils.js     Compression des photos dans le navigateur
 js/skills.js          Compétences : valeurs par défaut, icônes, rendu des cartes
 js/firebase.js        Chargement du SDK Firebase
@@ -21,6 +25,7 @@ firestore.rules       Règles de sécurité de la base de données
 firebase.json         Configuration pour la CLI Firebase (optionnelle)
 sitemap.xml           Plan du site pour Google
 assets/               Photos de profil (3 tailles), image de partage, icône
+assets/fonts/         Polices du CV (Manrope, Fraunces — licence SIL OFL)
 ```
 
 Tant que `js/firebase-config.js` est vide, le site fonctionne en **mode statique** :
@@ -96,7 +101,39 @@ dans Firebase pour que tu puisses leur ajouter des photos.
 - **Messages** : tout ce que les visiteurs envoient via le formulaire de contact.
 - **Compétences** : ajoute, modifie, réordonne ou supprime les cartes de compétences ;
   chaque compétence a un niveau (Notions, Débutant, Intermédiaire, Avancé, Expert) ou un simple point.
-- **Profil** : photo de la section « À propos » et année d'étude en GMP (à changer à chaque rentrée).
+- **Parcours** : formations et expériences (stages, jobs…) de la section « Parcours » et du CV.
+- **Profil** : photo, année d'étude (à changer à chaque rentrée), badge de disponibilité,
+  textes de présentation, coordonnées, langues parlées, centres d'intérêt.
+- **CV & partage** : état du CV, aperçus FR/EN, QR code du portfolio (PNG ou SVG),
+  statistiques de visites (GoatCounter) et alerte email à chaque message (EmailJS).
+
+## Version anglaise
+- Le bouton **EN / FR** en haut du site change la langue ; le choix est mémorisé.
+  Un visiteur dont le navigateur est en anglais arrive directement sur la version anglaise.
+- Lien direct vers la version anglaise : `…/mon_site_html/?lang=en`.
+- Dans l'admin, chaque éditeur a une partie **« Version anglaise (facultatif) »**.
+  Si tu la laisses vide : les termes courants (compétences, catégories) sont traduits
+  automatiquement, et les textes longs s'affichent en français.
+
+## Le CV téléchargeable : comment il est construit et mis à jour
+1. Le CV n'est **pas un fichier que tu écris** : il est fabriqué à partir du contenu du site
+   (Profil → résumé, coordonnées, langues, intérêts ; Parcours ; Compétences ; projets publiés,
+   « à la une » d'abord).
+2. Dès que tu **enregistres une modification** dans l'admin, le CV français **et** anglais est
+   régénéré automatiquement (environ une seconde) et remplace l'ancien. Rien d'autre à faire.
+3. Le bouton **« Mon CV »** du site télécharge la version dans la langue du visiteur.
+4. Réglages dans **Profil** : nombre de projets sur le CV, photo sur le CV (oui/non).
+5. **CV & partage → Aperçu FR / Aperçu EN** pour le relire ; **Régénérer maintenant** si besoin.
+6. Le CV contient un QR code qui mène à ton portfolio.
+
+## Services gratuits facultatifs
+- **Statistiques de visites** : crée un compte sur goatcounter.com (gratuit, sans cookies),
+  puis colle ton code (ex. `cenuel`) dans **CV & partage**. Tes statistiques sont sur
+  `https://cenuel.goatcounter.com`.
+- **Alerte email à chaque message** : crée un compte sur emailjs.com, ajoute un service
+  (ton Gmail) et un modèle d'email utilisant `{{from_name}}`, `{{from_email}}`, `{{subject}}`,
+  `{{message}}`, puis colle la *Public Key*, le *Service ID* et le *Template ID* dans **CV & partage**.
+  Ces identifiants sont publics par nature (comme la configuration Firebase).
 
 ## Choix techniques (et pourquoi)
 - **Pourquoi les photos sont dans Firestore et pas dans Firebase Storage ?**

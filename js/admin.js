@@ -937,7 +937,7 @@ function renderParcoursAdmin() {
           item.period ? el('span', { class: 'status', text: item.period }) : null,
           item.titleEn ? el('span', { class: 'status', text: 'EN ✓' }) : null
         ]),
-        el('h3', { class: 'a-card-title', text: item.title }),
+        el('h2', { class: 'a-card-title', text: item.title }),
         item.place ? el('p', { class: 'muted small', text: item.place }) : null
       ]),
       el('div', { class: 'a-actions' }, [

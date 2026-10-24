@@ -6,6 +6,8 @@ import { skillText, levelLabel } from './skills.js';
 import { formatMonth } from './firebase.js';
 
 const INK = '#0b1a2b', ACCENT = '#c8682c', MUTED = '#5b6672', LINE = '#d9dee4';
+// A4 = 595 pt de large ; marges 40 pt → 515 pt utiles = colonne principale + 22 pt + colonne latérale de 150 pt
+const PAGE_WIDTH = 515, SIDE_WIDTH = 150, GAP = 22, MAIN_WIDTH = PAGE_WIDTH - SIDE_WIDTH - GAP;
 
 const L = {
   fr: {
@@ -109,7 +111,7 @@ function heading(text) {
   return {
     stack: [
       { text: text.toUpperCase(), font: 'Manrope', bold: true, fontSize: 8.5, characterSpacing: 1.4, color: ACCENT },
-      { canvas: [{ type: 'line', x1: 0, y1: 3, x2: 515, y2: 3, lineWidth: 0.6, lineColor: LINE }] }
+      { canvas: [{ type: 'line', x1: 0, y1: 3, x2: MAIN_WIDTH, y2: 3, lineWidth: 0.6, lineColor: LINE }] }
     ],
     margin: [0, 14, 0, 6]
   };
@@ -221,8 +223,8 @@ function definition(d, photo) {
     }),
     content: [
       header,
-      { canvas: [{ type: 'line', x1: 0, y1: 10, x2: 515, y2: 10, lineWidth: 1.2, lineColor: INK }], margin: [0, 0, 0, 4] },
-      { columns: [{ width: '*', stack: main }, { width: 150, stack: side }], columnGap: 22 }
+      { canvas: [{ type: 'line', x1: 0, y1: 10, x2: PAGE_WIDTH, y2: 10, lineWidth: 1.2, lineColor: INK }], margin: [0, 0, 0, 4] },
+      { columns: [{ width: MAIN_WIDTH, stack: main }, { width: SIDE_WIDTH, stack: side }], columnGap: GAP }
     ]
   };
 }

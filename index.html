@@ -62,6 +62,13 @@
       if (l === 'en') { document.documentElement.lang = 'en'; document.documentElement.classList.add('i18n-pending'); }
     } catch (e) {}
   </script>
+  <!-- Modules du site téléchargés en parallèle (au lieu de les découvrir un par un) -->
+  <link rel="modulepreload" href="js/main.js" />
+  <link rel="modulepreload" href="js/i18n.js" />
+  <link rel="modulepreload" href="js/content.js" />
+  <link rel="modulepreload" href="js/skills.js" />
+  <link rel="modulepreload" href="js/firebase.js" />
+  <link rel="modulepreload" href="js/firebase-config.js" />
 </head>
 <body>
 <a class="skip-link" href="#main" data-i18n="skip">Aller au contenu</a>
