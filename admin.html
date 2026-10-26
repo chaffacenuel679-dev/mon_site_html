@@ -337,12 +337,12 @@
 <!-- Éditeur de projet -->
 <dialog class="editor" id="editor" aria-labelledby="editor-title">
   <form id="editor-form" method="dialog" novalidate>
-    <header class="editor-head">
+    <div class="editor-head">
       <h2 id="editor-title">Nouveau projet</h2>
       <button class="icon-btn" type="button" data-cancel aria-label="Fermer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
-    </header>
+    </div>
     <div class="editor-body">
       <div class="editor-fields">
         <div class="field">
@@ -412,23 +412,23 @@
         <ul class="photo-list" id="photo-list"></ul>
       </div>
     </div>
-    <footer class="editor-foot">
+    <div class="editor-foot">
       <p class="muted small" id="editor-status" role="status"></p>
       <button class="btn btn-ghost" type="button" data-cancel>Annuler</button>
       <button class="btn" type="submit" id="editor-save">Enregistrer</button>
-    </footer>
+    </div>
   </form>
 </dialog>
 
 <!-- Éditeur de carte de compétences -->
 <dialog class="editor skill-editor" id="skill-editor" aria-labelledby="skill-editor-title">
   <form id="skill-form" method="dialog" novalidate>
-    <header class="editor-head">
+    <div class="editor-head">
       <h2 id="skill-editor-title">Carte de compétences</h2>
       <button class="icon-btn" type="button" data-skill-cancel aria-label="Fermer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
-    </header>
+    </div>
     <div class="editor-body single">
       <div class="form-row">
         <div class="field">
@@ -459,23 +459,23 @@
         <button class="btn btn-ghost btn-small" type="button" id="add-skill-row">+ Ajouter une compétence</button>
       </div>
     </div>
-    <footer class="editor-foot">
+    <div class="editor-foot">
       <p class="muted small" id="skill-status" role="status"></p>
       <button class="btn btn-ghost" type="button" data-skill-cancel>Annuler</button>
       <button class="btn" type="submit" id="skill-save">Enregistrer</button>
-    </footer>
+    </div>
   </form>
 </dialog>
 
 <!-- Éditeur d'un élément du parcours -->
 <dialog class="editor skill-editor" id="parcours-editor" aria-labelledby="parcours-editor-title">
   <form id="parcours-form" method="dialog" novalidate>
-    <header class="editor-head">
+    <div class="editor-head">
       <h2 id="parcours-editor-title">Élément du parcours</h2>
       <button class="icon-btn" type="button" data-parcours-cancel aria-label="Fermer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
-    </header>
+    </div>
     <div class="editor-body single">
       <div class="form-row">
         <div class="field">
@@ -512,11 +512,11 @@
         <div class="field"><label for="p-descriptionEn">Description</label><textarea id="p-descriptionEn" name="descriptionEn" rows="4" maxlength="1200"></textarea></div>
       </details>
     </div>
-    <footer class="editor-foot">
+    <div class="editor-foot">
       <p class="muted small" id="parcours-status" role="status"></p>
       <button class="btn btn-ghost" type="button" data-parcours-cancel>Annuler</button>
       <button class="btn" type="submit" id="parcours-save">Enregistrer</button>
-    </footer>
+    </div>
   </form>
 </dialog>
 
