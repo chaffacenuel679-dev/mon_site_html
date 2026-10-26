@@ -237,8 +237,8 @@ function renderParcours() {
         el('span', { class: 'tl-dot', 'aria-hidden': 'true' }),
         el('p', { class: 'tl-year', text: pick(i, 'period', lang) }),
         el('h4', { class: 'tl-title', text: pick(i, 'title', lang) }),
-        i.place ? el('p', { class: 'tl-place', text: pick(i, 'place', lang) }) : null,
-        i.description ? el('p', { class: 'tl-desc', text: pick(i, 'description', lang) }) : null
+        pick(i, 'place', lang) ? el('p', { class: 'tl-place', text: pick(i, 'place', lang) }) : null,
+        pick(i, 'description', lang) ? el('p', { class: 'tl-desc', text: pick(i, 'description', lang) }) : null
       ]), shown);
       if (isFallback(i, 'title', lang)) item.lang = 'fr';
       return item;
@@ -247,9 +247,15 @@ function renderParcours() {
   };
   fill($('#timeline-edu'), 'education');
   fill($('#timeline-exp'), 'experience');
+  // Une colonne vide est masquée ; si le parcours est entièrement vide, la section disparaît du site et du menu
+  const hasEdu = items.some(i => i.kind === 'education');
   const hasExp = items.some(i => i.kind === 'experience');
+  $('#path-edu').hidden = !hasEdu;
   $('#path-exp').hidden = !hasExp;
-  $('#path-grid').classList.toggle('two', hasExp);
+  $('#path-grid').classList.toggle('two', hasEdu && hasExp);
+  $('#formation').hidden = !hasEdu && !hasExp;
+  const navPath = $('a[href="#formation"]');
+  if (navPath) navPath.parentElement.hidden = !hasEdu && !hasExp;
   onScroll();
 }
 

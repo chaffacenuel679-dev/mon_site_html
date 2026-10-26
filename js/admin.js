@@ -679,6 +679,8 @@ function renderSkillsAdmin() {
         btn('↑', () => move(-1), '', i === 0),
         btn('↓', () => move(1), '', i === skillCards.length - 1),
         btn('Supprimer', async () => {
+          // Sans aucune carte enregistrée, le site réafficherait les compétences par défaut
+          if (skillCards.length === 1) { toast('Garde au moins une carte : sinon le site réaffiche les compétences par défaut.', 'err'); return; }
           if (!confirm(`Supprimer la carte « ${card.title} » ?`)) return;
           skillCards.splice(i, 1);
           try { await saveSkills('Carte supprimée.'); } catch (err) { toast(explain(err), 'err'); loadSkills(); }
@@ -1205,9 +1207,13 @@ $('#qr-png').addEventListener('click', () => {
 });
 renderQr();
 
-/* Nettoyage : les services GoatCounter / EmailJS ont été retirés, on supprime leurs réglages enregistrés */
+/* Nettoyage : les services GoatCounter / EmailJS ont été retirés, on supprime leurs réglages enregistrés.
+   On vérifie d'abord l'existence du document pour ne pas écrire inutilement à chaque connexion. */
 async function removeOldIntegrations() {
-  try { await fs.deleteDoc(fs.doc(db, 'settings', 'integrations')); } catch (err) { console.warn(err); }
+  try {
+    const ref = fs.doc(db, 'settings', 'integrations');
+    if ((await fs.getDoc(ref)).exists()) await fs.deleteDoc(ref);
+  } catch (err) { console.warn(err); }
 }
 
 start();
