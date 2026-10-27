@@ -8,6 +8,7 @@ import {
   DEFAULT_PARCOURS, sanitizeParcours, PARCOURS_KINDS, SPEC_FIELDS, sanitizeSpecs
 } from './content.js';
 import { cvData, cvHash, generateCv } from './cv.js';
+import { missingTranslation } from './translations.js';
 import { qrcode } from './vendor/qrcode.mjs';
 import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE, THUMB } from './image-utils.js';
 
@@ -171,8 +172,36 @@ $('#covers-fix').addEventListener('click', async e => {
   } finally { button.disabled = false; }
 });
 
+// Projets dont la version anglaise peut être complétée automatiquement
+const translatable = () => projects.map(p => ({ p, patch: missingTranslation(p) })).filter(x => Object.keys(x.patch).length);
+
+function renderTranslateNote() {
+  const list = translatable();
+  $('#translate-note').hidden = !list.length;
+  if (!list.length) return;
+  $('#translate-text').textContent = `${list.length} projet(s) n'ont pas encore de version anglaise : ${list.map(x => `« ${x.p.title} »`).join(', ')}. Une traduction est prête pour le titre, le résumé et la description.`;
+}
+
+$('#translate-apply').addEventListener('click', async e => {
+  const button = e.currentTarget;
+  const list = translatable();
+  if (!list.length) return;
+  button.disabled = true;
+  try {
+    const batch = fs.writeBatch(db);
+    list.forEach(({ p, patch }) => batch.update(fs.doc(db, 'projects', p.id), { ...patch, updatedAt: fs.serverTimestamp() }));
+    await batch.commit();
+    toast(`Version anglaise complétée pour ${list.length} projet(s).`);
+    await loadProjects();
+    scheduleCv();
+  } catch (err) {
+    console.error(err); toast(explain(err), 'err');
+  } finally { button.disabled = false; }
+});
+
 function renderProjects() {
   renderCoversNote();
+  renderTranslateNote();
   $('#count-projects').textContent = projects.length ? `(${projects.length})` : '';
   $('#projects-empty').hidden = projects.length > 0;
   $('#admin-projects').replaceChildren(...projects.map((p, i) => {

@@ -112,6 +112,9 @@ dans Firebase pour que tu puisses leur ajouter des photos.
   personnalisation du contenu du CV.
 
 ## Version anglaise
+- Onglet **Projets** : quand une traduction a été préparée pour un projet encore sans version
+  anglaise, un bandeau propose de la **compléter en un clic**. Les textes se trouvent dans
+  `js/translations.js` ; seuls les champs anglais vides sont remplis, le français n'est jamais modifié.
 - Le bouton **EN / FR** en haut du site change la langue ; le choix est mémorisé.
   Un visiteur dont le navigateur est en anglais arrive directement sur la version anglaise.
 - Lien direct vers la version anglaise : `…/mon_site_html/?lang=en`.
