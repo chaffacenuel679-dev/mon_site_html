@@ -115,6 +115,9 @@ dans Firebase pour que tu puisses leur ajouter des photos.
 - Onglet **Projets** : quand une traduction a été préparée pour un projet encore sans version
   anglaise, un bandeau propose de la **compléter en un clic**. Les textes se trouvent dans
   `js/translations.js` ; seuls les champs anglais vides sont remplis, le français n'est jamais modifié.
+- Chaque carte de projet affiche **EN ✓** ou **EN à faire** : tu vois d'un coup d'œil ce qui
+  reste à traduire. Pour un nouveau projet, ouvre **Modifier** puis la partie
+  **« Version anglaise »** et saisis le titre, le résumé et la description.
 - Le bouton **EN / FR** en haut du site change la langue ; le choix est mémorisé.
   Un visiteur dont le navigateur est en anglais arrive directement sur la version anglaise.
 - Lien direct vers la version anglaise : `…/mon_site_html/?lang=en`.

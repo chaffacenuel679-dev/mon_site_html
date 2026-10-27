@@ -8,7 +8,7 @@ import {
   DEFAULT_PARCOURS, sanitizeParcours, PARCOURS_KINDS, SPEC_FIELDS, sanitizeSpecs
 } from './content.js';
 import { cvData, cvHash, generateCv } from './cv.js';
-import { missingTranslation } from './translations.js';
+import { missingTranslation, missingEnFields } from './translations.js';
 import { qrcode } from './vendor/qrcode.mjs';
 import { processPhoto, thumbFromDataUrl, decodeImage, encode, PROFILE, THUMB } from './image-utils.js';
 
@@ -214,7 +214,10 @@ function renderProjects() {
       el('span', { class: `status ${p.published ? 'on' : ''}`, text: p.published ? 'Publié' : 'Brouillon' }),
       p.featured ? el('span', { class: 'status star', text: 'À la une' }) : null,
       el('span', { class: 'status', text: `${p.images?.length || 0} photo(s)` }),
-      p.date ? el('span', { class: 'status', text: formatMonth(p.date) }) : null
+      p.date ? el('span', { class: 'status', text: formatMonth(p.date) }) : null,
+      missingEnFields(p).length
+        ? el('span', { class: 'status warn', text: 'EN à faire', title: 'Version anglaise incomplète : ouvre « Modifier » puis « Version anglaise ».' })
+        : el('span', { class: 'status', text: 'EN ✓' })
     ]);
     const editBtn = el('button', { type: 'button', text: 'Modifier' });
     const pubBtn = el('button', { type: 'button', text: p.published ? 'Dépublier' : 'Publier' });

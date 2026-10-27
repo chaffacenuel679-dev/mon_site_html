@@ -25,17 +25,17 @@ export const PROJECT_TRANSLATIONS = [
 ];
 
 const EN_FIELDS = ['titleEn', 'summaryEn', 'descriptionEn'];
+const filled = (obj, field) => String(obj?.[field] || '').trim() !== '';
+
+/** Champs anglais encore vides alors que le texte français existe. */
+export function missingEnFields(project) {
+  // Un champ français vide n'a rien à traduire
+  return EN_FIELDS.filter(f => !filled(project, f) && filled(project, f.replace(/En$/, '')));
+}
 
 /** Champs anglais proposés pour ce projet et encore vides. Renvoie {} s'il n'y a rien à compléter. */
 export function missingTranslation(project) {
   const ready = PROJECT_TRANSLATIONS.find(x => x.title === String(project?.title || '').trim());
   if (!ready) return {};
-  const patch = {};
-  EN_FIELDS.forEach(f => {
-    const current = String(project?.[f] || '').trim();
-    // Le champ français doit exister : on ne traduit pas un contenu absent
-    const source = String(project?.[f.replace(/En$/, '')] || '').trim();
-    if (!current && source && ready[f]) patch[f] = ready[f];
-  });
-  return patch;
+  return Object.fromEntries(missingEnFields(project).filter(f => ready[f]).map(f => [f, ready[f]]));
 }
