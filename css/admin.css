@@ -50,6 +50,9 @@ code { font-family: var(--font-mono); font-size: .85em; background: var(--bg-alt
 :root[data-theme="dark"] .status.on { border-color: #6fcf97; color: #6fcf97; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .status.on { border-color: #6fcf97; color: #6fcf97; } }
 .status.star { border-color: var(--accent); color: var(--accent); }
+.status.warn { border-color: #b8732e; color: #b8732e; }
+:root[data-theme="dark"] .status.warn { border-color: #e0a060; color: #e0a060; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .status.warn { border-color: #e0a060; color: #e0a060; } }
 .a-actions { display: flex; border-top: 1px solid var(--line); }
 .a-actions button { flex: 1; padding: .7rem .4rem; font-size: .8rem; font-weight: 600; color: var(--muted); transition: color .2s, background-color .2s; }
 .a-actions button + button { border-left: 1px solid var(--line); }

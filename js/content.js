@@ -42,7 +42,8 @@ const GLOSSARY = {
   'servo moteur': 'Servo motor', 'servomoteur': 'Servo motor', 'capteur ultrasons': 'Ultrasonic sensor',
   'capteur à ultrasons': 'Ultrasonic sensor', 'programme arduino': 'Arduino code', 'astronomie': 'Astronomy',
   'prototypage': 'Prototyping', 'cao': 'CAD', 'dao 2d & 3d': '2D & 3D drafting', 'dao 3d': '3D CAD', 'dao 2d/3d': '2D/3D CAD',
-  'ia & llms': 'AI & LLMs', 'ia art': 'AI art', 'art numérique': 'Digital art', 'design': 'Design', 'gmp': 'MPE', 'insti': 'INSTI'
+  'ia & llms': 'AI & LLMs', 'informatique & électronique': 'Computing & electronics',
+  'stage en atelier': 'Workshop internship', 'fabrication & atelier': 'Manufacturing & workshop', 'ia art': 'AI art', 'art numérique': 'Digital art', 'design': 'Design', 'gmp': 'MPE', 'insti': 'INSTI'
 };
 /** Traduit un terme court si le glossaire le connaît, sinon le renvoie tel quel. */
 export const translateTerm = text => GLOSSARY[String(text || '').trim().toLowerCase()] || text;
