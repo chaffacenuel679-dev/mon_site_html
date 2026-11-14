@@ -235,8 +235,30 @@ function definition(d, photo) {
   };
 }
 
+/* ---------------- Ajustement sur une page ----------------
+   Un CV qui dépasse d'une page de quelques lignes est resserré (texte et espacements
+   légèrement réduits) pour tenir sur une seule page. S'il reste trop long, il garde
+   sa taille normale et s'étend sur plusieurs pages. */
+const FIT_SCALES = [0.95, 0.9, 0.86];
+
+function compact(node, k) {
+  if (Array.isArray(node)) return node.map(n => compact(n, k));
+  if (!node || typeof node !== 'object') return node;
+  const out = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'fontSize' && typeof value === 'number') out[key] = Math.round(value * k * 100) / 100;
+    // Marges [gauche, haut, droite, bas] : seules les marges verticales sont resserrées
+    else if (key === 'margin' && Array.isArray(value) && value.length === 4) out[key] = [value[0], value[1] * k * k, value[2], value[3] * k * k];
+    else if (['stack', 'columns', 'text', 'content', 'defaultStyle'].includes(key)) out[key] = compact(value, k);
+    else out[key] = value;
+  }
+  return out;
+}
+
+const pageCount = b64 => (atob(b64).match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
+
 /**
- * Génère le CV et renvoie { dataUrl, size } (PDF encodé en base64).
+ * Génère le CV et renvoie { dataUrl, size, pages } (PDF encodé en base64).
  * photoSrc : photo de profil (data URL ou chemin), utilisée seulement si « photo sur le CV » est coché.
  */
 export async function generateCv(data, photoSrc) {
@@ -245,6 +267,13 @@ export async function generateCv(data, photoSrc) {
   if (data.photo && photoSrc) {
     try { photo = await toJpeg(photoSrc); } catch (e) { console.warn('Photo du CV ignorée', e); }
   }
-  const b64 = await pdfMake.createPdf(definition(data, photo)).getBase64();
-  return { dataUrl: `data:application/pdf;base64,${b64}`, size: Math.round(b64.length * 0.75) };
+  let b64 = await pdfMake.createPdf(definition(data, photo)).getBase64();
+  if (pageCount(b64) === 2) {
+    for (const k of FIT_SCALES) {
+      // pdfmake annote le document qu'il reçoit : on en reconstruit un neuf à chaque essai
+      const tighter = await pdfMake.createPdf(compact(definition(data, photo), k)).getBase64();
+      if (pageCount(tighter) === 1) { b64 = tighter; break; }
+    }
+  }
+  return { dataUrl: `data:application/pdf;base64,${b64}`, size: Math.round(b64.length * 0.75), pages: pageCount(b64) };
 }

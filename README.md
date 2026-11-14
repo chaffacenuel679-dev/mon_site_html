@@ -135,6 +135,9 @@ dans Firebase pour que tu puisses leur ajouter des photos.
 4. Réglages dans **Profil** : nombre de projets sur le CV, photo sur le CV (oui/non).
 5. **CV & partage → Aperçu FR / Aperçu EN** pour le relire ; **Régénérer maintenant** si besoin.
 6. Le CV contient un QR code qui mène à ton portfolio.
+   Si le contenu dépasse d'une page de quelques lignes, le CV est resserré automatiquement
+   (texte et espacements légèrement réduits) pour tenir sur une seule page. S'il reste trop
+   long, il s'étend sur plusieurs pages et l'onglet **CV & partage** le signale.
 7. **CV & partage → Personnaliser le contenu du CV** : décoche ce que tu ne veux pas voir sur le CV
    (une formation, une compétence, un projet…) sans le retirer du site, et ajoute des rubriques
    réservées au CV (Certifications, Références…). Tout ce que tu ajoutes plus tard au site
