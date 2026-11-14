@@ -591,7 +591,7 @@ function renderMessages(list) {
     const date = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : '';
     const reply = el('a', {
       class: 'btn btn-small',
-      href: `mailto:${encodeURIComponent(m.email || '')}?subject=${encodeURIComponent('Re: ' + (m.subject || 'Votre message'))}`,
+      href: `mailto:${String(m.email || '').replace(/[^\w.+@-]/g, '')}?subject=${encodeURIComponent('Re: ' + (m.subject || 'Votre message'))}`,
       text: 'Répondre'
     });
     const toggle = el('button', { type: 'button', class: 'btn btn-ghost btn-small', text: m.read ? 'Marquer non lu' : 'Marquer comme lu' });
@@ -1029,7 +1029,7 @@ parcoursForm.addEventListener('submit', async e => {
 /* =====================================================
    CV PDF (settings/cv-fr, settings/cv-en)
    ===================================================== */
-const CV_LAYOUT = 4;          // à incrémenter si la mise en page du CV change
+const CV_LAYOUT = 5;          // à incrémenter si la mise en page du CV change
 let contentReady = false;     // vrai quand toutes les données sont chargées
 let cvTimer = null, cvRunning = false, cvAgain = false;
 const cvCache = {};
@@ -1055,7 +1055,10 @@ function renderCvState() {
   const cv = info.cv;
   if (!cv?.updatedAt) { setCvState('Pas encore généré : le bouton « Mon CV » est masqué sur le site.'); return; }
   const date = cv.updatedAt.toDate ? cv.updatedAt.toDate() : new Date(cv.updatedAt);
-  setCvState(`✓ À jour — généré le ${date.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}, en français et en anglais.`, 'ok-text');
+  const when = date.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+  // Au-delà d'une page, on le signale : un CV d'étudiant gagne à tenir sur une seule page
+  if (cv.pages > 1) setCvState(`✓ À jour — généré le ${when}. Il fait ${cv.pages} pages : pour revenir à une seule, réduis le nombre de projets (onglet Profil) ou décoche des éléments ci-dessous.`, 'ok-text');
+  else setCvState(`✓ À jour — généré le ${when}, en français et en anglais.`, 'ok-text');
 }
 
 async function refreshCv(force = false) {
@@ -1070,8 +1073,10 @@ async function refreshCv(force = false) {
     btn.disabled = true;
     setCvState('Génération du CV en cours…');
     const out = {};
+    let maxPages = 1;
     for (const lang of ['fr', 'en']) {
-      const { dataUrl } = await generateCv(data[lang], photo);
+      const { dataUrl, pages } = await generateCv(data[lang], photo);
+      maxPages = Math.max(maxPages, pages);
       if (dataUrl.length > 900_000) throw new Error('Le CV dépasse la taille autorisée (essaie sans la photo).');
       out[lang] = dataUrl;
     }
@@ -1079,10 +1084,10 @@ async function refreshCv(force = false) {
     for (const lang of ['fr', 'en']) {
       batch.set(fs.doc(db, 'settings', `cv-${lang}`), { pdf: out[lang], size: Math.round(out[lang].length * 0.75), updatedAt: fs.serverTimestamp() });
     }
-    batch.set(fs.doc(db, 'settings', 'info'), { cv: { updatedAt: fs.serverTimestamp(), hash } }, { merge: true });
+    batch.set(fs.doc(db, 'settings', 'info'), { cv: { updatedAt: fs.serverTimestamp(), hash, pages: maxPages } }, { merge: true });
     await batch.commit();
     Object.assign(cvCache, out);
-    info.cv = { updatedAt: new Date(), hash };
+    info.cv = { updatedAt: new Date(), hash, pages: maxPages };
     renderCvState();
     toast('CV mis à jour (français + anglais).');
   } catch (err) {
